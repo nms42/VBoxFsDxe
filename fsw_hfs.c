@@ -607,11 +607,9 @@ fsw_hfs_btree_search (
 
   for (;;) {
     fsw_s32 cmp = 0;
-    int match;
     fsw_u32 count;
     BTreeKey *currkey;
 
-    match = 0;
     /* Read a node */
     if ((fsw_u32) fsw_hfs_read_file
         (btree->file, (fsw_u64) currnode * btree->node_size, btree->node_size,
