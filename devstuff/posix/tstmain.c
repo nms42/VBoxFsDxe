@@ -63,7 +63,7 @@ static int
 catfile(struct fsw_posix_volume *vol, char *path)
 {
     struct fsw_posix_file *file;
-    int r;
+    ssize_t r;
     char buf[4096];
 
     file = fsw_posix_open(vol, path, 0, 0);

@@ -156,7 +156,7 @@ ssize_t fsw_posix_read(struct fsw_posix_file *file, void *buf, size_t nbytes)
     fsw_status_t        status;
     fsw_u32             buffer_size;
 
-    buffer_size = nbytes;
+    buffer_size = (fsw_u32)nbytes;
     status = fsw_shandle_read(&file->shand, &buffer_size, buf);
     if (status)
         return -1;
@@ -310,7 +310,7 @@ fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path,
     struct fsw_string   lookup_path;
 
     lookup_path.type = FSW_STRING_TYPE_ISO88591;
-    lookup_path.len  = strlen(path);
+    lookup_path.len  = (int)strlen(path);
     lookup_path.size = lookup_path.len;
     lookup_path.data = (void *)path;
 
