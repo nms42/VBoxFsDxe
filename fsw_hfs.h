@@ -43,7 +43,11 @@
 #define int32_t   fsw_s32
 #define int64_t   fsw_s64
 
+#ifdef __APPLE__
+#include <hfs/hfs_format.h>
+#else
 #include "fsw_hfs_format.h"
+#endif
 
 #undef u_int8_t
 #undef u_int16_t
