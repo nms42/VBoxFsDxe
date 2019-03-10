@@ -78,9 +78,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\fsw_core.c" />
-    <ClCompile Include="..\fsw_hfs.c" />
-    <ClCompile Include="..\fsw_lib.c" />
+    <ClCompile Include="..\..\fsw_core.c" />
+    <ClCompile Include="..\..\fsw_hfs.c" />
+    <ClCompile Include="..\..\fsw_lib.c" />
     <ClCompile Include="fsw_mswin.c" />
     <ClCompile Include="tstmain.c" />
   </ItemGroup>
