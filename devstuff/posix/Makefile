@@ -1,4 +1,4 @@
-VSRC	= ..
+VSRC	= ../..
 
 MAIN	= tstmain.c
 
