@@ -598,11 +598,8 @@ fsw_hfs_btree_search (
 
   currnode = btree->root_node;
   status = fsw_alloc (btree->node_size, &buffer);
-  if (status) {
-    if (buffer != NULL)
-      fsw_free(buffer);
+  if (status)
     return status;
-  }
   node = (BTNodeDescriptor *) buffer;
 
   for (;;) {
@@ -711,7 +708,7 @@ fsw_hfs_btree_search (
 #ifdef VBOXHFS_BTREE_BINSEARCH
 done:
 #endif
-  if (buffer != NULL && status != FSW_SUCCESS)
+  if (status != FSW_SUCCESS)
     fsw_free (buffer);
 
   return status;
@@ -871,11 +868,8 @@ fsw_hfs_btree_iterate_node (
   fsw_u8 *buffer = NULL;
 
   status = fsw_alloc (btree->node_size, &buffer);
-  if (status) {
-    if (buffer != NULL)
-      fsw_free(buffer);
+  if (status)
     return status;
-  }
 
   for (;;) {
     fsw_u32 i;
@@ -915,8 +909,7 @@ fsw_hfs_btree_iterate_node (
     first_rec = 0;
   }
 done:
-  if (buffer)
-    fsw_free (buffer);
+  fsw_free (buffer);
 
   return status;
 }
@@ -1099,10 +1092,8 @@ fsw_hfs_get_extent (
     overflowkey.fileID = dno->g.dnode_id;
     overflowkey.startBlock = extent->log_start - lbno;
 
-    if (node != NULL) {
-      fsw_free (node);
-      node = NULL;
-    }
+    fsw_free (node);
+    node = NULL;
 
     status =
       fsw_hfs_btree_search (&vol->extents_tree, (BTreeKey *) & overflowkey,
@@ -1115,8 +1106,7 @@ fsw_hfs_get_extent (
     exts = (HFSPlusExtentRecord *) (key + 1);
   }
 
-  if (node != NULL)
-    fsw_free (node);
+  fsw_free (node);
 
   return status;
 }
@@ -1225,8 +1215,7 @@ fsw_hfs_dir_lookup (
 
 done:
 
-  if (node != NULL)
-    fsw_free (node);
+  fsw_free (node);
 
   if (free_data)
     fsw_strfree (&rec_name);
@@ -1292,8 +1281,7 @@ fsw_hfs_dir_read (
   status = create_hfs_dnode (dno, &param.file_info, child_dno_out);
 
 done:
-  if (node)
-    fsw_free (node);
+  fsw_free (node);
   fsw_strfree (&rec_name);
 
   return status;

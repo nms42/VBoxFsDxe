@@ -129,11 +129,8 @@ struct fsw_posix_file * fsw_posix_open(struct fsw_posix_volume *pvol, const char
 
     // allocate file structure
     status = fsw_alloc(sizeof(struct fsw_posix_file), &file);
-    if (status) {
-        if (file != NULL)
-          fsw_free(file);
+    if (status)
         return NULL;
-    }
     file->pvol = pvol;
 
     // open the file
@@ -209,11 +206,8 @@ struct fsw_posix_dir * fsw_posix_opendir(struct fsw_posix_volume *pvol, const ch
 
     // allocate file structure
     status = fsw_alloc(sizeof(struct fsw_posix_dir), &dir);
-    if (status) {
-        if (dir != NULL)
-        fsw_free(dir);
+    if (status)
         return NULL;
-    }
     dir->pvol = pvol;
 
     // open the directory
