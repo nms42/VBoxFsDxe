@@ -69,12 +69,8 @@
 #include "fsw_efi_base.h"
 #endif
 
-#ifdef HOST_POSIX
+#if defined(HOST_POSIX) || defined(HOST_MSWIN)
 #include "fsw_posix_base.h"
-#endif
-
-#ifdef HOST_MSWIN
-#include "fsw_mswin_base.h"
 #endif
 
 // message printing

@@ -1,6 +1,6 @@
 /**
- * \file fsw_mswin.h
- * MSWIN user space host environment header.
+ * \file fsw_posix.h
+ * POSIX user space host environment header.
  */
 
 /*-
@@ -35,20 +35,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _FSW_MSWIN_H_
-#define _FSW_MSWIN_H_
+#ifndef _FSW_POSIX_H_
+#define _FSW_POSIX_H_
+
+#include "fsw_core.h"
 
 #include <fcntl.h>
 #include <sys/types.h>
 #include <dirent.h>
 
-#include "fsw_core.h"
-
 /**
- * MSWIN Host: Private per-volume structure.
+ * POSIX Host: Private per-volume structure.
  */
 
-struct fsw_mswin_volume {
+struct fsw_posix_volume {
     struct fsw_volume           *vol;           //!< FSW volume structure
 
     int                         fd;             //!< System file descriptor for data access
@@ -56,42 +56,40 @@ struct fsw_mswin_volume {
 };
 
 /**
- * MSWIN Host: Private structure for an open file.
+ * POSIX Host: Private structure for an open file.
  */
 
-struct fsw_mswin_file {
-    struct fsw_mswin_volume     *pvol;          //!< MSWIN host volume structure
+struct fsw_posix_file {
+    struct fsw_posix_volume     *pvol;          //!< POSIX host volume structure
 
     struct fsw_shandle          shand;          //!< FSW handle for this file
 
 };
 
 /**
- * MSWIN Host: Private structure for an open directory.
+ * POSIX Host: Private structure for an open directory.
  */
 
-struct fsw_mswin_dir {
-    struct fsw_mswin_volume     *pvol;          //!< MSWIN host volume structure
+struct fsw_posix_dir {
+    struct fsw_posix_volume     *pvol;          //!< POSIX host volume structure
 
     struct fsw_shandle          shand;          //!< FSW handle for this file
 
 };
 
-
 /* functions */
 
-struct fsw_mswin_volume * fsw_mswin_mount(const char *path, struct fsw_fstype_table *fstype_table);
-int fsw_mswin_unmount(struct fsw_mswin_volume *pvol);
+struct fsw_posix_volume * fsw_posix_mount(const char *path, struct fsw_fstype_table *fstype_table);
+int fsw_posix_unmount(struct fsw_posix_volume *pvol);
 
-struct fsw_mswin_file * fsw_mswin_open(struct fsw_mswin_volume *pvol, const char *path, int flags, mode_t mode);
-ssize_t fsw_mswin_read(struct fsw_mswin_file *file, void *buf, size_t nbytes);
-off_t fsw_mswin_lseek(struct fsw_mswin_file *file, off_t offset, int whence);
-int fsw_mswin_close(struct fsw_mswin_file *file);
+struct fsw_posix_file * fsw_posix_open(struct fsw_posix_volume *pvol, const char *path, int flags, mode_t mode);
+ssize_t fsw_posix_read(struct fsw_posix_file *file, void *buf, size_t nbytes);
+off_t fsw_posix_lseek(struct fsw_posix_file *file, off_t offset, int whence);
+int fsw_posix_close(struct fsw_posix_file *file);
 
-struct fsw_mswin_dir * fsw_mswin_opendir(struct fsw_mswin_volume *pvol, const char *path);
-struct dirent * fsw_mswin_readdir(struct fsw_mswin_dir *dir);
-void fsw_mswin_rewinddir(struct fsw_mswin_dir *dir);
-int fsw_mswin_closedir(struct fsw_mswin_dir *dir);
-
+struct fsw_posix_dir * fsw_posix_opendir(struct fsw_posix_volume *pvol, const char *path);
+struct dirent * fsw_posix_readdir(struct fsw_posix_dir *dir);
+void fsw_posix_rewinddir(struct fsw_posix_dir *dir);
+int fsw_posix_closedir(struct fsw_posix_dir *dir);
 
 #endif

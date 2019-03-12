@@ -51,8 +51,8 @@
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>HOST_MSWIN;FSTYPE=hfs;VBOXHFS_BTREE_BINSEARCH;FSW_DEBUG_LEVEL=0;FSW_DNODE_CACHE_SIZE=7;mode_t=int;off_t=int64;ssize_t=long;SwapBytes16=_byteswap_ushort;SwapBytes32=_byteswap_ulong;SwapBytes64=_byteswap_uint64;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.;..\..</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HOST_MSWIN;FSTYPE=hfs;VBOXHFS_BTREE_BINSEARCH;FSW_DEBUG_LEVEL=0;FSW_DNODE_CACHE_SIZE=7;mode_t=int;off_t=int64;ssize_t=long;SwapBytes16=_byteswap_ushort;SwapBytes32=_byteswap_ulong;SwapBytes64=_byteswap_uint64;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\mswin;..\..</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -67,8 +67,8 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>HOST_MSWIN;FSTYPE=hfs;VBOXHFS_BTREE_BINSEARCH;FSW_DEBUG_LEVEL=0;FSW_DNODE_CACHE_SIZE=7;mode_t=int;off_t=int64;ssize_t=long;SwapBytes16=_byteswap_ushort;SwapBytes32=_byteswap_ulong;SwapBytes64=_byteswap_uint64;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.;..</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HOST_MSWIN;FSTYPE=hfs;VBOXHFS_BTREE_BINSEARCH;FSW_DEBUG_LEVEL=0;FSW_DNODE_CACHE_SIZE=7;mode_t=int;off_t=int64;ssize_t=long;SwapBytes16=_byteswap_ushort;SwapBytes32=_byteswap_ulong;SwapBytes64=_byteswap_uint64;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\mswin;..</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -78,11 +78,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\tstmain.c" />
+    <ClCompile Include="..\src\fsw_posix.c" />
     <ClCompile Include="..\..\fsw_core.c" />
     <ClCompile Include="..\..\fsw_hfs.c" />
     <ClCompile Include="..\..\fsw_lib.c" />
-    <ClCompile Include="fsw_mswin.c" />
-    <ClCompile Include="tstmain.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

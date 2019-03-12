@@ -27,11 +27,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		C4D7528522355D3800BF4213 /* fsw_hfs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = fsw_hfs.c; path = ../../fsw_hfs.c; sourceTree = "<group>"; };
-		C4D7528622355D3800BF4213 /* fsw_posix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = fsw_posix.c; path = ../posix/fsw_posix.c; sourceTree = "<group>"; };
-		C4D7528722355D3900BF4213 /* fsw_lib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = fsw_lib.c; path = ../../fsw_lib.c; sourceTree = "<group>"; };
-		C4D7528822355D3900BF4213 /* tstmain.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tstmain.c; path = ../posix/tstmain.c; sourceTree = "<group>"; };
+		C4D7528822355D3900BF4213 /* tstmain.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tstmain.c; path = ../src/tstmain.c; sourceTree = "<group>"; };
+		C4D7528622355D3800BF4213 /* fsw_posix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = fsw_posix.c; path = ../src/fsw_posix.c; sourceTree = "<group>"; };
 		C4D7528922355D3900BF4213 /* fsw_core.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = fsw_core.c; path = ../../fsw_core.c; sourceTree = "<group>"; };
+		C4D7528522355D3800BF4213 /* fsw_hfs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = fsw_hfs.c; path = ../../fsw_hfs.c; sourceTree = "<group>"; };
+		C4D7528722355D3900BF4213 /* fsw_lib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = fsw_lib.c; path = ../../fsw_lib.c; sourceTree = "<group>"; };
 		C4E236BF223557F100665CB9 /* tstmain */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = tstmain; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -254,7 +254,9 @@
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = NO;
 				CLANG_WARN_SEMICOLON_BEFORE_METHOD_BODY = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = NO;
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					HOST_POSIX,
@@ -266,14 +268,15 @@
 				);
 				GCC_WARN_SHADOW = YES;
 				HEADER_SEARCH_PATHS = (
-					../posix,
+					../src,
 					../..,
 				);
 				LLVM_LTO = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRINGS_FILE_OUTPUT_ENCODING = "UTF-8";
 				USER_HEADER_SEARCH_PATHS = (
-					../posix,
+					../src,
 					../..,
 				);
 			};
@@ -288,11 +291,14 @@
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = NO;
 				CLANG_WARN_SEMICOLON_BEFORE_METHOD_BODY = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = NO;
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_WARN_SHADOW = YES;
 				LLVM_LTO = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRINGS_FILE_OUTPUT_ENCODING = "UTF-8";
 			};
 			name = Release;
