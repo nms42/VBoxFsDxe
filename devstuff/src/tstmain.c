@@ -35,7 +35,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "fsw_mswin.h"
+#include "fsw_posix.h"
 
 #ifndef ITERATIONS
 #define ITERATIONS 1
@@ -60,41 +60,41 @@ static struct fsw_fstype_table *fstypes[] = {
 FILE* outfile = NULL;
 
 static int
-catfile(struct fsw_mswin_volume *vol, char *path)
+catfile(struct fsw_posix_volume *pvol, char *path)
 {
-    struct fsw_mswin_file *file;
-    int r;
+    struct fsw_posix_file *pfile;
+    ssize_t r;
     char buf[4096];
 
-    file = fsw_mswin_open(vol, path, 0, 0);
-    if (file == NULL) {
+    pfile = fsw_posix_open(pvol, path, 0, 0);
+    if (pfile == NULL) {
         fprintf(stderr, "open(%s) call failed.\n", path);
         return 1;
     }
-    while ((r = fsw_mswin_read(file, buf, sizeof(buf))) > 0)
+    while ((r = fsw_posix_read(pfile, buf, sizeof(buf))) > 0)
     {
         if (outfile != NULL)
         (void) fwrite(buf, r, 1, outfile);
     }
-    fsw_mswin_close(file);
+    fsw_posix_close(pfile);
 
     return 0;
 }
 
 static int
-viewdir(struct fsw_mswin_volume *vol, char *path, int level, int rflag, int docat)
+viewdir(struct fsw_posix_volume *pvol, char *path, int level, int rflag, int docat)
 {
-    struct fsw_mswin_dir *dir;
+    struct fsw_posix_dir *dir;
     struct dirent *dent;
     int i;
     char subpath[4096];
 
-    dir = fsw_mswin_opendir(vol, path);
+    dir = fsw_posix_opendir(pvol, path);
     if (dir == NULL) {
         fprintf(stderr, "opendir(%s) call failed.\n", path);
         return 1;
     }
-    while ((dent = fsw_mswin_readdir(dir)) != NULL) {
+    while ((dent = fsw_posix_readdir(dir)) != NULL) {
         if (outfile != NULL) {
             for (i = 0; i < level*2; i++)
                 fputc(' ', outfile);
@@ -102,14 +102,14 @@ viewdir(struct fsw_mswin_volume *vol, char *path, int level, int rflag, int doca
         }
 
         if (rflag && dent->d_type == DT_DIR) {
-            _snprintf(subpath, sizeof(subpath) - 1, "%s%s/", path, dent->d_name);
-            viewdir(vol, subpath, level + 1, rflag, docat);
+            snprintf(subpath, sizeof(subpath) - 1, "%s%s/", path, dent->d_name);
+            viewdir(pvol, subpath, level + 1, rflag, docat);
         } else if (docat && dent->d_type == DT_REG) {
-            _snprintf(subpath, sizeof(subpath) - 1, "%s%s", path, dent->d_name);
-            catfile(vol, subpath);
+            snprintf(subpath, sizeof(subpath) - 1, "%s%s", path, dent->d_name);
+            catfile(pvol, subpath);
         }
     }
-    fsw_mswin_closedir(dir);
+    fsw_posix_closedir(dir);
 
     return 0;
 }
@@ -122,12 +122,13 @@ usage(char* pname)
 }
 
 int
-main(int argc, char **argv)
+main(int argc, char *argv[])
 {
     int lflag, cflag, rflag;
-    struct fsw_mswin_volume *vol = NULL;
+    struct fsw_posix_volume *pvol = NULL;
     int i;
     char* cp;
+    struct fsw_fstype_table* fst;
 
     if (argc != 4) {
         usage(argv[0]);
@@ -151,14 +152,14 @@ main(int argc, char **argv)
         }
     }
 
-    for (i = 0; fstypes[i] != NULL; i++) {
-        vol = fsw_mswin_mount(argv[1], fstypes[i]);
-        if (vol != NULL) {
-            fprintf(stdout, "Mounted as '%s'.\n", (char*)(fstypes[i]->name.data));
+    for (i = 0, fst = fstypes[i]; fst != NULL; i++, fst = fstypes[i]) {
+        pvol = fsw_posix_mount(argv[1], fst);
+        if (pvol != NULL) {
+            fprintf(stdout, "Mounted as '%s'.\n", (char *)pvol->vol->label.data);
             break;
         }
     }
-    if (vol == NULL) {
+    if (pvol == NULL) {
         fprintf(stderr, "Mounting failed.\n");
         return 1;
     }
@@ -167,13 +168,13 @@ main(int argc, char **argv)
 
     for (i = 0; i < ITERATIONS; i++) {
         if (lflag) {
-            viewdir(vol, argv[3], 0, rflag, cflag);
+            viewdir(pvol, argv[3], 0, rflag, cflag);
         } else if (cflag) {
-            catfile(vol, argv[3]);
+            catfile(pvol, argv[3]);
         }
     }
 
-    fsw_mswin_unmount(vol);
+    fsw_posix_unmount(pvol);
 
     if (outfile != NULL) {
         (void) fclose (outfile);

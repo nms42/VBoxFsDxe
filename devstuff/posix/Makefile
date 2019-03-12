@@ -1,13 +1,13 @@
 VSRC	= ../..
-
-MAIN	= tstmain.c
+PSRC	= ../src
 
 SRCS	= ${MAIN} \
-		fsw_posix.c \
+		${PSRC}/tstmain.c \
+		${PSRC}/fsw_posix.c \
+		\
 		${VSRC}/fsw_core.c \
 		${VSRC}/fsw_lib.c \
 		${VSRC}/fsw_hfs.c
-
 
 CFLAGS	= \
 	-DHOST_POSIX \
@@ -19,7 +19,7 @@ CFLAGS	= \
 
 
 hfstest:	${SRCS}
-	${CC} -g -Wall -I. -I${VSRC} ${CFLAGS} ${SRCS}
+	${CC} -g -Wall -I${PSRC} -I${VSRC} ${CFLAGS} ${SRCS}
 
 clean:
 	/bin/rm -fr a.out* *.plist *.o *.gmon

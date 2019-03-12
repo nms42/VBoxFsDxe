@@ -522,6 +522,7 @@ fsw_u16      fsw_to_lower(fsw_u16 ch);
 #define  S_ISVTX   0001000    /* save swapped text even after use */
 #define  S_IFWHT  0160000    /* whiteout */
 
+#if !defined(HOST_MSWIN)
 #ifndef  S_IFMT
 #define  S_IFMT   0170000    /* type of file mask */
 #endif
@@ -533,6 +534,7 @@ fsw_u16      fsw_to_lower(fsw_u16 ch);
 #endif
 #ifndef  S_IFREG
 #define  S_IFREG   0100000    /* regular */
+#endif
 #endif
 
 #define  S_ISDIR(m)  (((m) & 0170000) == 0040000)  /* directory */

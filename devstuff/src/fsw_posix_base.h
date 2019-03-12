@@ -42,9 +42,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <stdint.h>
+
+#ifdef HOST_MSWIN
+#include <windows.h>
+#include <io.h>
+#endif
+
+#ifdef HOST_POSIX
+#include <unistd.h>
+#endif
 
 #define FSW_LITTLE_ENDIAN (1)
 // TODO: use info from the headers to define FSW_LITTLE_ENDIAN or FSW_BIG_ENDIAN
