@@ -4,3 +4,4 @@
 .vs
 Debug
 *.user
+.DS_Store
