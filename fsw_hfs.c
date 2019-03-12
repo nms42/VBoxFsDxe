@@ -685,20 +685,16 @@ fsw_hfs_btree_search (
           *key_offset = recnum;
           return FSW_SUCCESS;
 
-        } else if (node->kind == kBTIndexNode) {
-          currnode = fsw_hfs_btree_next_node (currkey);
-          break;
         }
       }
     }
 
-    if (cmp > 0)
+    if (cmp < 0)
       currkey = fsw_hfs_btree_rec (btree, node, upper);
 
     if (node->kind == kBTIndexNode && currkey != NULL) {
       currnode = fsw_hfs_btree_next_node (currkey);
-    }
-    else {
+    } else {
       status = FSW_NOT_FOUND;
       break;
     }
