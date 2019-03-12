@@ -87,13 +87,6 @@ static fsw_status_t fsw_hfs_dir_read (
   struct fsw_hfs_dnode **child_dno
 );
 
-#if 0
-static fsw_status_t fsw_hfs_read_dirrec (
-  struct fsw_shandle *shand,
-  struct hfs_dirrec_buffer *dirrec_buffer
-);
-#endif
-
 static fsw_status_t fsw_hfs_readlink (
   struct fsw_hfs_volume *vol,
   struct fsw_hfs_dnode *dno,
@@ -628,10 +621,6 @@ fsw_hfs_btree_search (
 
       currkey = fsw_hfs_btree_rec (btree, node, recnum);
       cmp = compare_keys (currkey, key);
-#if 0
-      FSW_MSG_DEBUGV ((FSW_MSGSTR (__FUNCTION__ ": currnode %d recnum=%d/%d cmp=%d kind=%d\n"),
-            currnode, recnum, count, cmp, node->kind));
-#endif
 
       /* Leaf node */
       if (node->kind == kBTLeafNode) {
@@ -1263,10 +1252,6 @@ fsw_hfs_dir_read (
   param.vol = vol;
   param.shandle = shand;
   param.parent = dno->g.dnode_id;
-#if 0
-  if (dno->iLink != 0)
-    param.parent = 0;
-#endif
   param.cur_pos = 0;
   status =
     fsw_hfs_btree_iterate_node (&vol->catalog_tree, node, ptr,

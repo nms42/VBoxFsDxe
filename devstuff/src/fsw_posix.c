@@ -369,10 +369,6 @@ fsw_status_t fsw_posix_read_block(struct fsw_volume *vol, fsw_u32 phys_bno, void
     off_t           block_offset, seek_result;
     ssize_t         read_result;
 
-#if 0
-    FSW_MSG_DEBUGV((FSW_MSGSTR("fsw_posix_read_block: %d (%d)\n"), phys_bno, vol->phys_blocksize));
-#endif
-
     // read from disk
     block_offset = (off_t)phys_bno * vol->phys_blocksize;
     seek_result = lseek(pvol->fd, block_offset, SEEK_SET);
@@ -384,99 +380,5 @@ fsw_status_t fsw_posix_read_block(struct fsw_volume *vol, fsw_u32 phys_bno, void
 
     return FSW_SUCCESS;
 }
-
-
-/**
- * Time mapping callback for the fsw_dnode_stat call. This function converts
- * a Posix style timestamp into an EFI_TIME structure and writes it to the
- * appropriate member of the EFI_FILE_INFO structure that we're filling.
- */
-
-#if 0
-static void fsw_posix_store_time_posix(struct fsw_dnode_stat *sb, int which, fsw_u32 posix_time)
-{
-    EFI_FILE_INFO       *FileInfo = (EFI_FILE_INFO *)sb->host_data;
-
-    if (which == FSW_DNODE_STAT_CTIME)
-        fsw_posix_decode_time(&FileInfo->CreateTime,       posix_time);
-    else if (which == FSW_DNODE_STAT_MTIME)
-        fsw_posix_decode_time(&FileInfo->ModificationTime, posix_time);
-    else if (which == FSW_DNODE_STAT_ATIME)
-        fsw_posix_decode_time(&FileInfo->LastAccessTime,   posix_time);
-}
-#endif
-
-/**
- * Mode mapping callback for the fsw_dnode_stat call. This function looks at
- * the Posix mode passed by the file system driver and makes appropriate
- * adjustments to the EFI_FILE_INFO structure that we're filling.
- */
-
-#if 0
-static void fsw_posix_store_attr_posix(struct fsw_dnode_stat *sb, fsw_u16 posix_mode)
-{
-    EFI_FILE_INFO       *FileInfo = (EFI_FILE_INFO *)sb->host_data;
-
-    if ((posix_mode & S_IWUSR) == 0)
-        FileInfo->Attribute |= EFI_FILE_READ_ONLY;
-}
-#endif
-
-/**
- * Common function to fill an EFI_FILE_INFO with information about a dnode.
- */
-
-#if 0
-EFI_STATUS fsw_posix_dnode_fill_FileInfo(IN FSW_VOLUME_DATA *Volume,
-                                       IN struct fsw_dnode *dno,
-                                       IN OUT UINTN *BufferSize,
-                                       OUT VOID *Buffer)
-{
-    EFI_STATUS          Status;
-    EFI_FILE_INFO       *FileInfo;
-    UINTN               RequiredSize;
-    struct fsw_dnode_stat sb;
-
-    // make sure the dnode has complete info
-    Status = fsw_posix_map_status(fsw_dnode_fill(dno), Volume);
-    if (EFI_ERROR(Status))
-        return Status;
-
-    // TODO: check/assert that the dno's name is in UTF16
-
-    // check buffer size
-    RequiredSize = SIZE_OF_EFI_FILE_INFO + fsw_posix_strsize(&dno->name);
-    if (*BufferSize < RequiredSize) {
-        // TODO: wind back the directory in this case
-
-        *BufferSize = RequiredSize;
-        return EFI_BUFFER_TOO_SMALL;
-    }
-
-    // fill structure
-    ZeroMem(Buffer, RequiredSize);
-    FileInfo = (EFI_FILE_INFO *)Buffer;
-    FileInfo->Size = RequiredSize;
-    FileInfo->FileSize          = dno->size;
-    FileInfo->Attribute         = 0;
-    if (dno->type == FSW_DNODE_TYPE_DIR)
-        FileInfo->Attribute    |= EFI_FILE_DIRECTORY;
-    fsw_posix_strcpy(FileInfo->FileName, &dno->name);
-
-    // get the missing info from the fs driver
-    ZeroMem(&sb, sizeof(struct fsw_dnode_stat));
-    sb.store_time_posix = fsw_posix_store_time_posix;
-    sb.store_attr_posix = fsw_posix_store_attr_posix;
-    sb.host_data = FileInfo;
-    Status = fsw_posix_map_status(fsw_dnode_stat(dno, &sb), Volume);
-    if (EFI_ERROR(Status))
-        return Status;
-    FileInfo->PhysicalSize      = sb.used_bytes;
-
-    // prepare for return
-    *BufferSize = RequiredSize;
-    return EFI_SUCCESS;
-}
-#endif
 
 // EOF

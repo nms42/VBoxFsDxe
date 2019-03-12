@@ -41,18 +41,9 @@
 #define ITERATIONS 1
 #endif
 
-#if 0
-extern struct fsw_fstype_table FSW_FSTYPE_TABLE_NAME(ext2);
-extern struct fsw_fstype_table FSW_FSTYPE_TABLE_NAME(reiserfs);
-#endif
-
 extern struct fsw_fstype_table FSW_FSTYPE_TABLE_NAME(FSTYPE);
 
 static struct fsw_fstype_table *fstypes[] = {
-#if 0
-    &FSW_FSTYPE_TABLE_NAME(ext2),
-    &FSW_FSTYPE_TABLE_NAME(reiserfs),
-#endif
     &FSW_FSTYPE_TABLE_NAME(FSTYPE),
     NULL
 };
