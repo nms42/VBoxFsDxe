@@ -181,7 +181,7 @@ off_t fsw_posix_lseek(struct fsw_posix_file *file, off_t offset, int whence)
     else
         file->shand.pos = base_offset + offset;
 
-    return file->shand.pos;
+    return (off_t)(file->shand.pos);
 }
 
 /**
