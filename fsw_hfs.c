@@ -166,7 +166,7 @@ fsw_hfs_read_file (
     fsw_u32 off = (fsw_u32) (pos & block_size_mask);
     fsw_s32 next_len = len;
 
-    log_bno = (fsw_u32) RShiftU64 (pos, block_size_bits);
+    log_bno = (fsw_u32) FSW_U64_SHR (pos, block_size_bits);
 
     if (next_len >= 0 && (fsw_u32) next_len > block_size)
       next_len = block_size;
@@ -766,7 +766,7 @@ fill_fileinfo (
 
       finfo->size = be64_to_cpu (info->dataFork.logicalSize);
       finfo->used =
-        LShiftU64 (be32_to_cpu (info->dataFork.totalBlocks),
+        FSW_U64_SHL (be32_to_cpu (info->dataFork.totalBlocks),
                    vol->block_size_shift);
       finfo->ctime = be32_to_cpu (info->createDate);
       finfo->mtime = be32_to_cpu (info->contentModDate);
