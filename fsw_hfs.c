@@ -620,6 +620,7 @@ fsw_hfs_btree_search (
     count = be16_to_cpu (node->numRecords);
 
 #ifndef VBOXHFS_BTREE_BINSEARCH
+    /* Perform linear search */
     for (recnum = 0; recnum < count; recnum++) {
 
       currkey = fsw_hfs_btree_rec (btree, node, recnum);
@@ -646,7 +647,7 @@ fsw_hfs_btree_search (
       status = FSW_NOT_FOUND;
       break;
     }
-    if (cmp <= 0 && node->fLink) {
+    if (cmp <= 0 && node->fLink != 0) {
       currnode = be32_to_cpu (node->fLink);
     }
 #else
