@@ -564,6 +564,27 @@ fsw_hfs_btree_next_node (
 }
 
 static fsw_status_t
+fsw_hfs_btree_read_node (
+  struct fsw_hfs_btree *btree,
+  fsw_u32 nodenum,
+  fsw_u8* buffer
+)
+{
+  if ((fsw_u32) fsw_hfs_read_file
+      (btree->file, (fsw_u64) nodenum * btree->node_size, btree->node_size,
+       buffer) != btree->node_size) {
+    return FSW_VOLUME_CORRUPTED;
+  }
+
+  /* XXX: Gap between node descriptor and first record real? */
+  if (be16_to_cpu (*(fsw_u16 *) (buffer + btree->node_size - 2)) != sizeof (BTNodeDescriptor)) {
+    return FSW_VOLUME_CORRUPTED;
+  }
+
+  return FSW_SUCCESS;
+}
+
+static fsw_status_t
 fsw_hfs_btree_search (
   struct fsw_hfs_btree *btree,
   BTreeKey * key,
@@ -593,19 +614,9 @@ fsw_hfs_btree_search (
     fsw_u32 count;
     BTreeKey *currkey;
 
-    /* Read a node */
-    if ((fsw_u32) fsw_hfs_read_file
-        (btree->file, (fsw_u64) currnode * btree->node_size, btree->node_size,
-         buffer) != btree->node_size) {
-      status = FSW_VOLUME_CORRUPTED;
+    status = fsw_hfs_btree_read_node (btree, currnode, buffer);
+    if (status != FSW_SUCCESS)
       break;
-    }
-
-    if (be16_to_cpu (*(fsw_u16 *) (buffer + btree->node_size - 2)) !=
-        sizeof (BTNodeDescriptor)) {
-      status = FSW_VOLUME_CORRUPTED;
-      break;
-    }
 
     count = be16_to_cpu (node->numRecords);
 
@@ -871,21 +882,19 @@ fsw_hfs_btree_iterate_node (
 
     next_node = be32_to_cpu (node->fLink);
 
-    if (!next_node) {
+    if (next_node == 0) {
       status = FSW_NOT_FOUND;
       break;
     }
 
-    if ((fsw_u32) fsw_hfs_read_file
-        (btree->file, next_node * btree->node_size, btree->node_size,
-         buffer) != btree->node_size) {
-      status = FSW_VOLUME_CORRUPTED;
+    status = fsw_hfs_btree_read_node (btree, next_node, buffer);
+    if (status != FSW_SUCCESS)
       break;
-    }
 
     node = (BTNodeDescriptor *) buffer;
     first_rec = 0;
   }
+
 done:
   fsw_free (buffer);
 
