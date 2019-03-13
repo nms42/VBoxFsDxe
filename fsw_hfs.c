@@ -553,7 +553,7 @@ fsw_hfs_btree_rec (
 }
 
 static fsw_u32
-fsw_hfs_btree_next_node (
+fsw_hfs_btree_next_node_num (
   BTreeKey *currkey
 )
 {
@@ -685,7 +685,7 @@ fsw_hfs_btree_search (
       currkey = fsw_hfs_btree_rec (btree, node, upper);
 
     if (node->kind == kBTIndexNode && currkey != NULL) {
-      currnode = fsw_hfs_btree_next_node (currkey);
+      currnode = fsw_hfs_btree_next_node_num (currkey);
     } else {
       status = FSW_NOT_FOUND;
       break;
