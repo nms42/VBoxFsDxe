@@ -639,7 +639,7 @@ fsw_hfs_btree_search (
       else if (node->kind == kBTIndexNode) {
         if (cmp > 0)
           break;
-        currnode = fsw_hfs_btree_next_node (currkey);
+        currnode = fsw_hfs_btree_next_node_num (currkey);
       }
     }
 
