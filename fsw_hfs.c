@@ -576,7 +576,7 @@ fsw_hfs_btree_read_node (
     return FSW_VOLUME_CORRUPTED;
   }
 
-  /* XXX: Gap between node descriptor and first record real? */
+  /* XXX: Is the gap between node descriptor and first record real? */
   if (be16_to_cpu (*(fsw_u16 *) (buffer + btree->node_size - 2)) != sizeof (BTNodeDescriptor)) {
     return FSW_VOLUME_CORRUPTED;
   }
