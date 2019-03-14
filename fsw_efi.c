@@ -984,14 +984,13 @@ fsw_efi_dir_open (
   struct fsw_dnode *dno;
   struct fsw_dnode *target_dno;
   struct fsw_string lookup_path;
+  int lplen;
 
   if (OpenMode != EFI_FILE_MODE_READ)
     return EFI_WRITE_PROTECTED;
 
-  lookup_path.type = FSW_STRING_TYPE_UTF16;
-  lookup_path.len = (int) StrLen (FileName);
-  lookup_path.size = lookup_path.len * sizeof (fsw_u16);
-  lookup_path.data = FileName;
+  lplen = (int) StrLen (FileName);
+  fsw_str_init(&lookup_path, FSW_STRING_TYPE_UTF16, lplen, lplen * sizeof(fsw_u16), FileName);
 
   // resolve the path (symlinks along the way are automatically resolved)
   Status =

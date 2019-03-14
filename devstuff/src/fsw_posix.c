@@ -302,11 +302,10 @@ fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path,
     struct fsw_dnode    *dno;
     struct fsw_dnode    *target_dno;
     struct fsw_string   lookup_path;
+    int lplen;
 
-    lookup_path.type = FSW_STRING_TYPE_ISO88591;
-    lookup_path.len  = (int)strlen(path);
-    lookup_path.size = lookup_path.len;
-    lookup_path.data = (void *)path;
+    lplen = (int)strlen(path);
+    fsw_str_init(&lookup_path, FSW_STRING_TYPE_ISO88591, lplen, lplen, (void *)path);
 
     // resolve the path (symlinks along the way are automatically resolved)
     status = fsw_dnode_lookup_path(pvol->vol->root, &lookup_path, '/', &dno);

@@ -816,21 +816,18 @@ fsw_status_t fsw_dnode_readlink_data(struct fsw_dnode *dno, struct fsw_string *l
     if (dno == NULL || dno->vol == NULL || dno->size > FSW_PATH_MAX)
         return FSW_VOLUME_CORRUPTED;
 
-    s.type = FSW_STRING_TYPE_ISO88591;
-    s.size = s.len = (int)dno->size;
-    s.data = buffer;
-
     // open shandle and read the data
     status = fsw_shandle_open(dno, &shand);
     if (status)
         return status;
-    buffer_size = (fsw_u32)s.size;
+    buffer_size = sizeof(buffer);
     status = fsw_shandle_read(&shand, &buffer_size, buffer);
     fsw_shandle_close(&shand);
     if (status)
         return status;
-    if ((int)buffer_size < s.size)
-        return FSW_VOLUME_CORRUPTED;
+
+    // TODO: link datum type?
+    fsw_str_init(&s, FSW_STRING_TYPE_ISO88591, buffer_size, buffer_size, buffer);
 
     status = fsw_strdup_coerce(link_target, dno->vol->host_string_type, &s);
     return status;
