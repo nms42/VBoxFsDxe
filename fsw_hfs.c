@@ -598,9 +598,6 @@ fsw_hfs_btree_search (
   BTNodeDescriptor *node;
   fsw_u32 currnode;
   fsw_u32 recnum;
-#ifdef VBOXHFS_BTREE_BINSEARCH
-  fsw_u32 lower, upper;
-#endif
 
   currnode = btree->root_node;
   status = fsw_alloc (btree->node_size, &buffer);
@@ -619,24 +616,24 @@ fsw_hfs_btree_search (
 
     count = be16_to_cpu (node->numRecords);
 
-#ifndef VBOXHFS_BTREE_BINSEARCH
-    /* Perform linear search */
-    for (recnum = 0; recnum < count; recnum++) {
+    if (count == 0) {
+      status = FSW_NOT_FOUND;
+      break;
+    }
 
+#ifndef VBOXHFS_BTREE_BINSEARCH
+    /* linear search */
+    for (recnum = 0; recnum < count; recnum++) {
       currkey = fsw_hfs_btree_rec (btree, node, recnum);
       cmp = compare_keys (currkey, key);
 
-      /* Leaf node */
       if (node->kind == kBTLeafNode) {
         if (cmp == 0) {
-          /* Found! */
           *result = node;
           *key_offset = recnum;
-
           return FSW_SUCCESS;
         }
-      }
-      else if (node->kind == kBTIndexNode) {
+      } else if (node->kind == kBTIndexNode) {
         if (cmp > 0)
           break;
         currnode = fsw_hfs_btree_next_node_num (currkey);
@@ -647,56 +644,49 @@ fsw_hfs_btree_search (
       status = FSW_NOT_FOUND;
       break;
     }
+
     if (cmp <= 0 && node->fLink != 0) {
       currnode = be32_to_cpu (node->fLink);
     }
 #else
-    /* Perform binary search */
-    lower = 0;
-    upper = count - 1;
-    currkey = NULL;
-
-    if (count == 0) {
-      status = FSW_NOT_FOUND;
-      goto done;
-    }
-
-    while (lower <= upper) {
-      recnum = (lower + upper) / 2;
-
-      currkey = fsw_hfs_btree_rec (btree, node, recnum);
-
-      cmp = compare_keys (currkey, key);
-      if (cmp > 0) {
-        upper = recnum - 1;
-      } else if (cmp < 0) {
-        lower = recnum + 1;
-      } else if (cmp == 0) {
-        if (node->kind == kBTLeafNode) {
-          // Found!
-          *result = node;
-          *key_offset = recnum;
-          return FSW_SUCCESS;
-
+    /* binary search */
+    {
+      fsw_u32 lower = 0;
+      fsw_u32 upper = count - 1;
+      currkey = NULL;
+      
+      while (lower <= upper) {
+        recnum = (lower + upper) / 2;
+        
+        currkey = fsw_hfs_btree_rec (btree, node, recnum);
+        cmp = compare_keys (currkey, key);
+        
+        if (cmp > 0) {
+          upper = recnum - 1;
+        } else if (cmp < 0) {
+          lower = recnum + 1;
+        } else if (cmp == 0) {
+          if (node->kind == kBTLeafNode) { /* Found! */
+            *result = node;
+            *key_offset = recnum;
+            return FSW_SUCCESS;
+          }
         }
       }
-    }
-
-    if (cmp < 0)
-      currkey = fsw_hfs_btree_rec (btree, node, upper);
-
-    if (node->kind == kBTIndexNode && currkey != NULL) {
-      currnode = fsw_hfs_btree_next_node_num (currkey);
-    } else {
-      status = FSW_NOT_FOUND;
-      break;
+      
+      if (cmp < 0)
+        currkey = fsw_hfs_btree_rec (btree, node, upper);
+      
+      if (node->kind == kBTIndexNode && currkey != NULL) {
+        currnode = fsw_hfs_btree_next_node_num (currkey);
+      } else {
+        status = FSW_NOT_FOUND;
+        break;
+      }
     }
 #endif
   }
 
-#ifdef VBOXHFS_BTREE_BINSEARCH
-done:
-#endif
   if (status != FSW_SUCCESS)
     fsw_free (buffer);
 
