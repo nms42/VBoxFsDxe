@@ -541,7 +541,7 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
 
 void fsw_strfree(struct fsw_string *s)
 {
-    if (s->type != FSW_STRING_TYPE_EMPTY && s->data)
+    if (s->type != FSW_STRING_TYPE_EMPTY && s->data != NULL)
         fsw_free(s->data);
     s->type = FSW_STRING_TYPE_EMPTY;
 }
