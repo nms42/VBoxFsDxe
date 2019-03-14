@@ -408,6 +408,18 @@ int fsw_streq_cstr(struct fsw_string *s1, const char *s2)
 }
 
 /**
+ * Init string
+ */
+
+void fsw_str_init(struct fsw_string *dest, int type, int len, int size, void *data)
+{
+    dest->type = type;
+    dest->len = len;
+    dest->size = size;
+    dest->data = data;
+}
+
+/**
  * Creates a duplicate of a string, converting it to the given encoding during the copy.
  * If the function returns FSW_SUCCESS, the caller must free the string later with
  * fsw_strfree.
