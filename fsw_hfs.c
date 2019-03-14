@@ -211,7 +211,6 @@ fsw_hfs_volume_mount (
   void *buffer = NULL;
   HFSPlusVolumeHeader *voldesc;
   fsw_u32 blockno;
-  struct fsw_string s;
 
   rv = FSW_UNSUPPORTED;
 
@@ -283,11 +282,7 @@ fsw_hfs_volume_mount (
     fsw_set_blocksize (vol, block_size, block_size);
 
     /* Set default volume name */
-    s.type = FSW_STRING_TYPE_ISO88591;
-    s.size = s.len = kHFSMaxVolumeNameChars;
-    s.data = "HFS+ volume";
-    status = fsw_strdup_coerce (&vol->g.label, vol->g.host_string_type, &s);
-    CHECK (status);
+    fsw_str_init (&vol->g.label, FSW_STRING_TYPE_EMPTY, 0, 0, NULL);
 
     /* Setup catalog dnode */
     status =
@@ -329,7 +324,7 @@ fsw_hfs_volume_mount (
     vol->catalog_tree.root_node = be32_to_cpu (tree_header.rootNode);
     vol->catalog_tree.node_size = be16_to_cpu (tree_header.nodeSize);
 
-    /* Take Volume Name before tree_header overwritten */
+    /* Take volume Name before tree_header overwritten */
     {
       fsw_u32 firstLeafNum;
       fsw_u64 catfOffset;
@@ -348,14 +343,12 @@ fsw_hfs_volume_mount (
 
         btnd = (BTNodeDescriptor *) cbuff;
         ck = (HFSPlusCatalogKey *) (cbuff + sizeof (BTNodeDescriptor));
-        if (btnd->kind == kBTLeafNode &&
-            be32_to_cpu (ck->parentID) == kHFSRootParentID) {
+        if (btnd->kind == kBTLeafNode && be32_to_cpu (ck->parentID) == kHFSRootParentID) {
           struct fsw_string vn;
+	  int vnlen;
 
-          vn.type = FSW_STRING_TYPE_UTF16_BE;
-          vn.len = be16_to_cpu (ck->nodeName.length);
-          vn.size = vn.len * sizeof (fsw_u16);
-          vn.data = ck->nodeName.unicode;
+          vnlen = be16_to_cpu (ck->nodeName.length);
+          fsw_str_init (&vol->g.label, FSW_STRING_TYPE_UTF16_BE, vnlen, vnlen * sizeof(fsw_u16), ck->nodeName.unicode);
           fsw_strfree (&vol->g.label);
           status =
             fsw_strdup_coerce (&vol->g.label, vol->g.host_string_type, &vn);
