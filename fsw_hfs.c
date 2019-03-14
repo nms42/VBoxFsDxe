@@ -345,10 +345,10 @@ fsw_hfs_volume_mount (
         ck = (HFSPlusCatalogKey *) (cbuff + sizeof (BTNodeDescriptor));
         if (btnd->kind == kBTLeafNode && be32_to_cpu (ck->parentID) == kHFSRootParentID) {
           struct fsw_string vn;
-	  int vnlen;
+          int vnlen;
 
           vnlen = be16_to_cpu (ck->nodeName.length);
-          fsw_str_init (&vol->g.label, FSW_STRING_TYPE_UTF16_BE, vnlen, vnlen * sizeof(fsw_u16), ck->nodeName.unicode);
+          fsw_str_init (&vn, FSW_STRING_TYPE_UTF16_BE, vnlen, vnlen * sizeof(fsw_u16), ck->nodeName.unicode);
           fsw_strfree (&vol->g.label);
           status =
             fsw_strdup_coerce (&vol->g.label, vol->g.host_string_type, &vn);
