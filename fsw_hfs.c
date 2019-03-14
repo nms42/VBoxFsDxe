@@ -282,7 +282,7 @@ fsw_hfs_volume_mount (
     fsw_set_blocksize (vol, block_size, block_size);
 
     /* Set default volume name */
-    fsw_str_init (&vol->g.label, FSW_STRING_TYPE_EMPTY, 0, 0, NULL);
+    fsw_string_setter (&vol->g.label, FSW_STRING_TYPE_EMPTY, 0, 0, NULL);
 
     /* Setup catalog dnode */
     status =
@@ -348,7 +348,7 @@ fsw_hfs_volume_mount (
           int vnlen;
 
           vnlen = be16_to_cpu (ck->nodeName.length);
-          fsw_str_init (&vn, FSW_STRING_TYPE_UTF16_BE, vnlen, vnlen * sizeof(fsw_u16), ck->nodeName.unicode);
+          fsw_string_setter (&vn, FSW_STRING_TYPE_UTF16_BE, vnlen, vnlen * sizeof(fsw_u16), ck->nodeName.unicode);
           fsw_strfree (&vol->g.label);
           status =
             fsw_strdup_coerce (&vol->g.label, vol->g.host_string_type, &vn);

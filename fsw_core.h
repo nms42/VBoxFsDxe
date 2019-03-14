@@ -477,7 +477,7 @@ fsw_status_t fsw_memdup(void **dest_out, void *src, int len);
 int          fsw_strlen(struct fsw_string *s);
 int          fsw_streq(struct fsw_string *s1, struct fsw_string *s2);
 int          fsw_streq_cstr(struct fsw_string *s1, const char *s2);
-void         fsw_str_init(struct fsw_string *dest, int type, int len, int size, void *data);
+void         fsw_string_setter(struct fsw_string *dest, int type, int len, int size, void *data);
 fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, int type, struct fsw_string *src);
 void         fsw_strsplit(struct fsw_string *lookup_name, struct fsw_string *buffer, char separator);
 

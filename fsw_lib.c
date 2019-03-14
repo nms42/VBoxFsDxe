@@ -400,7 +400,7 @@ int fsw_streq_cstr(struct fsw_string *s1, const char *s2)
     for (i = 0; s2[i]; i++)
         ;
 
-    fsw_str_init(&temp_s, FSW_STRING_TYPE_ISO88591, i, i, (void *)s2);
+    fsw_string_setter(&temp_s, FSW_STRING_TYPE_ISO88591, i, i, (void *)s2);
 
     return fsw_streq(s1, &temp_s);
 }
@@ -409,7 +409,7 @@ int fsw_streq_cstr(struct fsw_string *s1, const char *s2)
  * Init string
  */
 
-void fsw_str_init(struct fsw_string *dest, int type, int len, int size, void *data)
+void fsw_string_setter(struct fsw_string *dest, int type, int len, int size, void *data)
 {
     dest->type = type;
     dest->len = len;
@@ -428,12 +428,12 @@ fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, int type, struct fsw_str
     fsw_status_t    status;
 
     if (src->type == FSW_STRING_TYPE_EMPTY || src->len == 0) {
-        fsw_str_init(dest, type, 0, 0, NULL);
+        fsw_string_setter(dest, type, 0, 0, NULL);
         return FSW_SUCCESS;
     }
 
     if (src->type == type) {
-        fsw_str_init(dest, type, src->len, src->size, NULL);
+        fsw_string_setter(dest, type, src->len, src->size, NULL);
         status = fsw_alloc(dest->size, &dest->data);
         if (status)
             return status;

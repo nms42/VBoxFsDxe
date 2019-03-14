@@ -990,7 +990,7 @@ fsw_efi_dir_open (
     return EFI_WRITE_PROTECTED;
 
   lplen = (int) StrLen (FileName);
-  fsw_str_init(&lookup_path, FSW_STRING_TYPE_UTF16, lplen, lplen * sizeof(fsw_u16), FileName);
+  fsw_string_setter(&lookup_path, FSW_STRING_TYPE_UTF16, lplen, lplen * sizeof(fsw_u16), FileName);
 
   // resolve the path (symlinks along the way are automatically resolved)
   Status =

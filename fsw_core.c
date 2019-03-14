@@ -827,7 +827,7 @@ fsw_status_t fsw_dnode_readlink_data(struct fsw_dnode *dno, struct fsw_string *l
         return status;
 
     // TODO: link datum type?
-    fsw_str_init(&s, FSW_STRING_TYPE_ISO88591, buffer_size, buffer_size, buffer);
+    fsw_string_setter(&s, FSW_STRING_TYPE_ISO88591, buffer_size, buffer_size, buffer);
 
     status = fsw_strdup_coerce(link_target, dno->vol->host_string_type, &s);
     return status;
