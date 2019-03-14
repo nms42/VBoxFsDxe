@@ -41,6 +41,8 @@
 #define ITERATIONS 1
 #endif
 
+void  usage(char* pname);
+
 extern struct fsw_fstype_table FSW_FSTYPE_TABLE_NAME(FSTYPE);
 
 static struct fsw_fstype_table *fstypes[] = {
