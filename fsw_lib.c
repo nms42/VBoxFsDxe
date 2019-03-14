@@ -428,12 +428,12 @@ fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, int type, struct fsw_str
     fsw_status_t    status;
 
     if (src->type == FSW_STRING_TYPE_EMPTY || src->len == 0) {
-	fsw_str_init(dest, type, 0, 0, NULL);
+        fsw_str_init(dest, type, 0, 0, NULL);
         return FSW_SUCCESS;
     }
 
     if (src->type == type) {
-	fsw_str_init(dest, type, src->len, src->size, NULL);
+        fsw_str_init(dest, type, src->len, src->size, NULL);
         status = fsw_alloc(dest->size, &dest->data);
         if (status)
             return status;
