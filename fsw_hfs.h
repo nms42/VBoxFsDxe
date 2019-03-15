@@ -65,7 +65,11 @@
 # pragma pack(push,2)
 #endif
 
+#ifdef __APPLE__
+#include <hfs/hfs_format.h>
+#else
 #include "hfs_format.h"
+#endif
 
 #ifdef _MSC_VER
 # pragma pack(pop)
