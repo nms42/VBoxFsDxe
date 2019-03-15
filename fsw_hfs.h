@@ -23,6 +23,18 @@
 
 #include "fsw_core.h"
 
+#ifdef _MSC_VER
+# define inline __inline
+#endif
+
+#ifdef _MSC_VER
+/*
+ * vasily: disable warning for non-standard anonymous struct/union
+ * declarations
+ */
+# pragma warning (disable:4201)
+#endif
+
 /*
  * The HFS Plus volume format is described in detail in Apple Technote 1150.
  *
@@ -48,7 +60,16 @@
 #define int32_t   fsw_s32
 #define int64_t   fsw_s64
 
+#ifdef _MSC_VER
+# define __attribute__(xx)
+# pragma pack(push,2)
+#endif
+
 #include "hfs_format.h"
+
+#ifdef _MSC_VER
+# pragma pack(pop)
+#endif
 
 #undef u_int8_t
 #undef u_int16_t
@@ -59,19 +80,11 @@
 #undef int32_t
 #undef int64_t
 
-#ifdef _MSC_VER
-/* vasily: disable warning for non-standard anonymous struct/union
- * declarations
- */
-# pragma warning (disable:4201)
-# define inline __inline
-#endif
-
 struct hfs_dirrec {
     fsw_u8      _dummy;
 };
 
-#pragma pack(2)
+#pragma pack(push,2)
 
 struct fsw_hfs_key
 {
@@ -83,7 +96,7 @@ struct fsw_hfs_key
   };
 };
 
-#pragma pack()
+#pragma pack(pop)
 
 typedef enum {
     /* Regular HFS */
