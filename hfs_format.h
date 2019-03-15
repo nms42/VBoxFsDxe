@@ -28,8 +28,11 @@
 #ifndef __HFS_FORMAT__
 #define __HFS_FORMAT__
 
+#ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/appleapiopts.h>
+#endif
+
 #include "hfs_unistr.h"
 
 /*
@@ -774,6 +777,7 @@ enum {
 	kHFSBinaryCompare = 0xBC  /* binary compare (case-sensitive) */
 };
 
+#ifdef __APPLE__
 #include <uuid/uuid.h>
 
 /* JournalInfoBlock - Structure that describes where our journal lives */
@@ -809,7 +813,7 @@ enum {
 // uuid that uniquely identifies that instance.
 //
 #define EXTJNL_CONTENT_TYPE_UUID "4A6F7572-6E61-11AA-AA11-00306543ECAC"
-
+#endif
 
 #ifdef __cplusplus
 }
