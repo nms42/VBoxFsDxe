@@ -23,7 +23,6 @@
 
 #include "fsw_core.h"
 
-
 //! Block size for HFS volumes.
 #define HFS_BLOCKSIZE            512
 
@@ -43,11 +42,7 @@
 #define int32_t   fsw_s32
 #define int64_t   fsw_s64
 
-#ifdef __APPLE__
-#include <hfs/hfs_format.h>
-#else
-#include "fsw_hfs_format.h"
-#endif
+#include "hfs_format.h"
 
 #undef u_int8_t
 #undef u_int16_t
