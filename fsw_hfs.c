@@ -331,7 +331,7 @@ fsw_hfs_volume_mount (
       fsw_u8 cbuff[sizeof (BTNodeDescriptor) + sizeof (HFSPlusCatalogKey)];
 
       firstLeafNum = be32_to_cpu (tree_header.firstLeafNode);
-      catfOffset = firstLeafNum * vol->catalog_tree.node_size;
+      catfOffset = (fsw_u64)vol->catalog_tree.node_size * firstLeafNum;
 
       r =
         fsw_hfs_read_file (vol->catalog_tree.file, catfOffset, sizeof (cbuff),
@@ -1213,16 +1213,13 @@ fsw_hfs_dir_read (
   struct HFSPlusCatalogKey catkey;
   fsw_u32 ptr;
   BTNodeDescriptor *node = NULL;
-
   visitor_parameter_t param;
-  struct fsw_string rec_name;
+  struct fsw_string rec_name = FSW_STRING_INIT;
 
+  fsw_memzero(&catkey, sizeof(catkey));
   catkey.parentID = dno->g.dnode_id;
-  catkey.nodeName.length = 0;
-
+ 
   fsw_memzero (&param, sizeof (param));
-
-  rec_name.type = FSW_STRING_TYPE_EMPTY;
   param.file_info.name = &rec_name;
 
   status =
