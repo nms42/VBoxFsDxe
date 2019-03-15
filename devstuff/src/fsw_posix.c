@@ -84,7 +84,7 @@ struct fsw_posix_volume * fsw_posix_mount(const char *path, struct fsw_fstype_ta
     pvol->fd = -1;
 
     // open underlying file/device
-    pvol->fd = open(path, O_RDONLY, 0);
+    pvol->fd = open(path, O_RDONLY | O_BINARY, 0);
     if (pvol->fd < 0) {
         fprintf(stderr, "fsw_posix_mount: %s: %s\n", path, strerror(errno));
         fsw_free(pvol);
