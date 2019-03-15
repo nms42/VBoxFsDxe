@@ -1,7 +1,10 @@
 **/*.xcworkspace/
+**/Debug/
 **/xcuserdata/
 **/xcuserstate/
-.vs
-Debug
+*.exe
+*.obj
+*.sln
 *.user
 .DS_Store
+.vs
