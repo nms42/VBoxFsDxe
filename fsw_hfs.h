@@ -23,6 +23,12 @@
 
 #include "fsw_core.h"
 
+/*
+ * The HFS Plus volume format is described in detail in Apple Technote 1150.
+ *
+ * http://developer.apple.com/library/archive/technotes/tn/tn1150.html
+ */
+
 //! Block size for HFS volumes.
 #define HFS_BLOCKSIZE            512
 
