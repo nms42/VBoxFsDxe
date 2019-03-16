@@ -1,3 +1,5 @@
+SCAN_BUILD	?= scan-build
+
 ##-disable-checker [checker name]
 ##+apiModeling.google.GTest
 ##+apiModeling.StdCLibraryFunctions
@@ -119,7 +121,7 @@
 #valist.ValistBase
 
 analyze:
-	scan-build-devel -analyze-headers --use-cc $(CC) \
+	$(SCAN_BUILD) -analyze-headers --use-cc $(CC) \
 	\
 	-enable-checker alpha.clone.CloneChecker \
 	-enable-checker alpha.core.BoolAssignment \
