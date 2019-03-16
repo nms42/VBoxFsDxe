@@ -29,7 +29,9 @@
 #ifndef __HFS_UNISTR__
 #define __HFS_UNISTR__
 
+#if defined(__APPLE) && !defined(HOST_EFI)
 #include <sys/types.h>
+#endif
 
 /* 
  * hfs_unitstr.h

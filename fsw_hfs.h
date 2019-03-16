@@ -65,7 +65,7 @@
 # pragma pack(push,2)
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(HOST_EFI)
 #include <hfs/hfs_format.h>
 #else
 #include "hfs_format.h"
