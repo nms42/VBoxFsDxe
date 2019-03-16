@@ -426,9 +426,11 @@ void fsw_dnode_release(struct fsw_dnode *dno)
 
     dno->refcount--;
 
+#if defined(FSW_DNODE_CACHE_SIZE) && FSW_DNODE_CACHE_SIZE > 0
     // numcslots always zero for non dir dnodes
     if (dno->refcount != dno->numcslots)
         return;
+#endif
 
     parent_dno = dno->parent;
 
