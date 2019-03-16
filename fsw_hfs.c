@@ -1214,18 +1214,17 @@ fsw_hfs_dir_read (
   fsw_u32 ptr;
   BTNodeDescriptor *node = NULL;
   visitor_parameter_t param;
-  struct fsw_string rec_name = FSW_STRING_INIT;
+  struct fsw_string rec_name;
 
   fsw_memzero(&catkey, sizeof(catkey));
   catkey.parentID = dno->g.dnode_id;
  
   fsw_memzero (&param, sizeof (param));
+  fsw_string_setter (&rec_name, FSW_STRING_TYPE_EMPTY, 0, 0, NULL);
   param.file_info.name = &rec_name;
 
-  status =
-    fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) & catkey,
-                          vol->
-                          case_sensitive ? fsw_hfs_cmp_catkey :
+  status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) & catkey,
+                          vol-> case_sensitive ? fsw_hfs_cmp_catkey :
                           fsw_hfs_cmpi_catkey, &node, &ptr);
   if (status)
     goto done;
@@ -1235,8 +1234,7 @@ fsw_hfs_dir_read (
   param.shandle = shand;
   param.parent = dno->g.dnode_id;
   param.cur_pos = 0;
-  status =
-    fsw_hfs_btree_iterate_node (&vol->catalog_tree, node, ptr,
+  status = fsw_hfs_btree_iterate_node (&vol->catalog_tree, node, ptr,
                                 fsw_hfs_btree_visit_node, &param);
   if (status)
     goto done;
