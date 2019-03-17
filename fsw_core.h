@@ -218,6 +218,11 @@ enum {
 /** Static initializer for an empty string. */
 #define FSW_STRING_INIT { FSW_STRING_TYPE_EMPTY, 0, 0, NULL }
 
+struct fsw_string_list {
+    struct fsw_string_list *flink;
+    struct fsw_string_list *blink;
+    struct fsw_string *str;
+};
 
 /* forward declarations */
 
@@ -425,6 +430,9 @@ void         fsw_block_release(struct VOLSTRUCTNAME *vol, fsw_u32 phys_bno, void
 fsw_status_t fsw_dnode_create_root(struct VOLSTRUCTNAME *vol, fsw_u32 dnode_id, struct DNODESTRUCTNAME **dno_out);
 fsw_status_t fsw_dnode_create(struct DNODESTRUCTNAME *parent_dno, fsw_u32 dnode_id, int type,
                               struct fsw_string *name, struct DNODESTRUCTNAME **dno_out);
+
+fsw_status_t fsw_dnode_id_lookup(struct VOLSTRUCTNAME *vol, fsw_u32 id, struct fsw_dnode **child_dno_out);
+
 void         fsw_dnode_retain(struct fsw_dnode *dno);
 void         fsw_dnode_release(struct fsw_dnode *dno);
 
@@ -442,6 +450,8 @@ fsw_status_t fsw_dnode_dir_read(struct fsw_shandle *shand, struct fsw_dnode **ch
 fsw_status_t fsw_dnode_readlink(struct fsw_dnode *dno, struct fsw_string *link_target);
 fsw_status_t fsw_dnode_readlink_data(struct DNODESTRUCTNAME *dno, struct fsw_string *link_target);
 fsw_status_t fsw_dnode_resolve(struct fsw_dnode *dno, struct fsw_dnode **target_dno_out);
+
+fsw_status_t fsw_dnode_fullpath(struct fsw_dnode *dno, struct fsw_string_list **slist);
 
 /*@}*/
 
@@ -484,6 +494,7 @@ void         fsw_strsplit(struct fsw_string *lookup_name, struct fsw_string *buf
 void         fsw_strfree(struct fsw_string *s);
 fsw_u16      fsw_to_lower(fsw_u16 ch);
 
+void         fsw_string_freelist(struct fsw_string_list *s);
 /*@}*/
 
 

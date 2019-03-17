@@ -1033,4 +1033,13 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
     return FSW_SUCCESS;
 }
 
+fsw_status_t fsw_dnode_id_lookup(struct VOLSTRUCTNAME *vol, fsw_u32 id, struct fsw_dnode **child_dno_out)
+{
+	return FSW_NOT_FOUND;
+}
+
+fsw_status_t fsw_dnode_fullpath(struct fsw_dnode *dno, struct fsw_string_list **slist)
+{
+	return FSW_NOT_FOUND;
+}
 // EOF
