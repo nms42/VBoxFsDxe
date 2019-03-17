@@ -401,9 +401,8 @@ fsw_status_t fsw_dnode_create_root(struct fsw_volume *vol, fsw_u32 dnode_id, str
 
     status = fsw_dnode_create(vol, NULL, dnode_id, FSW_DNODE_TYPE_DIR, NULL, &dno);
     if (status == FSW_SUCCESS) {
-        fsw_dnode_register(vol, dno);
         *dno_out = dno;
-}
+    }
     return status;
 }
 
