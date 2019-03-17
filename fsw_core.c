@@ -337,7 +337,7 @@ fsw_status_t fsw_dnode_create(struct fsw_dnode *parent_dno, fsw_u32 dnode_id, in
     struct fsw_dnode *dno;
 
     // check if we already have a dnode with the same id
-    for (dno = vol->dnode_head; dno; dno = dno->next) {
+    for (dno = vol->dnode_head; dno != NULL; dno = dno->next) {
         if (dno->dnode_id == dnode_id) {
             fsw_dnode_retain(dno);
             *dno_out = dno;
