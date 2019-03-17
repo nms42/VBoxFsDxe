@@ -59,7 +59,7 @@ fsw_status_t fsw_posix_read_block(struct fsw_volume *vol, fsw_u32 phys_bno, void
  */
 
 struct fsw_host_table   fsw_posix_host_table = {
-    FSW_STRING_TYPE_ISO88591,
+    FSW_STRING_TYPE_UTF8,
 
     fsw_posix_change_blocksize,
     fsw_posix_read_block
