@@ -341,23 +341,21 @@ int fsw_streq(struct fsw_string *s1, struct fsw_string *s2)
 {
     struct fsw_string temp_s;
 
+    fsw_string_setter(&temp_s, FSW_STRING_TYPE_ISO88591, 0, 0, NULL);
+
     // handle empty strings
     if (s1->type == FSW_STRING_TYPE_EMPTY) {
-        temp_s.type = FSW_STRING_TYPE_ISO88591;
-        temp_s.size = temp_s.len = 0;
-        temp_s.data = NULL;
         return fsw_streq(&temp_s, s2);
     }
+
     if (s2->type == FSW_STRING_TYPE_EMPTY) {
-        temp_s.type = FSW_STRING_TYPE_ISO88591;
-        temp_s.size = temp_s.len = 0;
-        temp_s.data = NULL;
         return fsw_streq(s1, &temp_s);
     }
 
     // check length (count of chars)
     if (s1->len != s2->len)
         return 0;
+
     if (s1->len == 0)   // both strings are empty
         return 1;
 
