@@ -46,8 +46,7 @@ void  usage(char* pname);
 extern struct fsw_fstype_table FSW_FSTYPE_TABLE_NAME(FSTYPE);
 
 static struct fsw_fstype_table *fstypes[] = {
-    &FSW_FSTYPE_TABLE_NAME(FSTYPE),
-    NULL
+    &FSW_FSTYPE_TABLE_NAME(FSTYPE)
 };
 
 FILE* outfile = NULL;
@@ -145,14 +144,12 @@ main(int argc, char *argv[])
         }
     }
 
-    for (i = 0, fst = fstypes[i]; fst != NULL; i++, fst = fstypes[i]) {
-        pvol = fsw_posix_mount(argv[1], fst);
-        if (pvol != NULL) {
-            fprintf(stdout, "Mounted as '%s'.\n", (char *)pvol->vol->label.data);
-            break;
-        }
-    }
-    if (pvol == NULL) {
+    fst = fstypes[0];
+    pvol = fsw_posix_mount(argv[1], fst);
+
+    if (pvol != NULL) {
+        fprintf(stdout, "Mounted as '%s'.\n", (char *)pvol->vol->label.data);
+    } else {
         fprintf(stderr, "Mounting failed.\n");
         return 1;
     }
