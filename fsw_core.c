@@ -1050,6 +1050,11 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
     return FSW_SUCCESS;
 }
 
+fsw_status_t fsw_dnode_id_lookup(struct VOLSTRUCTNAME *vol, fsw_u32 dnid, struct fsw_dnode **dn_out)
+{
+	return FSW_NOT_FOUND;
+}
+
 fsw_status_t fsw_dnode_id_fullpath(struct fsw_volume *vol, fsw_u32 dnid, int stype, struct fsw_string_list **slist)
 {
 	return FSW_NOT_FOUND;
