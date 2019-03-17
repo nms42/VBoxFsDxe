@@ -341,11 +341,10 @@ static struct fsw_dnode *fsw_vol_lookup_dnode(struct fsw_volume *vol, fsw_u32 dn
  * that must be released by the caller with fsw_dnode_release.
  */
 
-fsw_status_t fsw_dnode_create(struct fsw_dnode *parent_dno, fsw_u32 dnode_id, int type,
+fsw_status_t fsw_dnode_create(struct fsw_volume *vol, struct fsw_dnode *parent_dno, fsw_u32 dnode_id, int type,
                               struct fsw_string *name, struct fsw_dnode **dno_out)
 {
     fsw_status_t    status;
-    struct fsw_volume *vol = parent_dno->vol;
     struct fsw_dnode *dno;
 
     // check if we already have a dnode with the same id
@@ -400,7 +399,7 @@ fsw_status_t fsw_dnode_create_root(struct fsw_volume *vol, fsw_u32 dnode_id, str
     fsw_status_t    status;
     struct fsw_dnode *dno;
 
-    status = fsw_dnode_create(NULL, dnode_id, FSW_DNODE_TYPE_DIR, NULL, &dno);
+    status = fsw_dnode_create(vol, NULL, dnode_id, FSW_DNODE_TYPE_DIR, NULL, &dno);
     if (status == FSW_SUCCESS) {
         fsw_dnode_register(vol, dno);
         *dno_out = dno;
