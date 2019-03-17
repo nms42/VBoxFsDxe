@@ -312,48 +312,6 @@ static void fsw_dnode_register(struct fsw_volume *vol, struct fsw_dnode *dno)
 }
 
 /**
- * Create a dnode representing the root directory. This function is called by the file system
- * driver while mounting the file system. The root directory is special because it has no parent
- * dnode, its name is defined to be empty, and its type is also fixed. Otherwise, this functions
- * behaves in the same way as fsw_dnode_create.
- */
-
-fsw_status_t fsw_dnode_create_root(struct fsw_volume *vol, fsw_u32 dnode_id, struct fsw_dnode **dno_out)
-{
-    fsw_status_t    status;
-    struct fsw_dnode *dno;
-
-    // allocate memory for the structure
-    status = fsw_alloc_zero(vol->fstype_table->dnode_struct_size, (void **)&dno);
-    if (status)
-        return status;
-
-    // fill the structure
-    dno->vol = vol;
-    dno->parent = NULL;
-    dno->dnode_id = dnode_id;
-    dno->type = FSW_DNODE_TYPE_DIR;
-    dno->refcount = 1;
-    fsw_string_setter(&dno->name, FSW_STRING_TYPE_EMPTY, 0, 0, NULL);
-
-    fsw_dnode_register(vol, dno);
-
-    *dno_out = dno;
-    return FSW_SUCCESS;
-}
-
-int fsw_dnode_is_root(struct fsw_dnode *dno)
-{
-    if (dno->parent == NULL &&
-        dno->type == FSW_DNODE_TYPE_DIR &&
-	fsw_strlen(&dno->name) == 0) {
-        return 1;
-    }
-
-    return 0;
-}
-
-/**
  * Create a new dnode representing a file system object. This function is called by
  * the file system driver in response to directory lookup or read requests. Note that
  * if there already is a dnode with the given dnode_id on record, then no new object
@@ -389,26 +347,64 @@ fsw_status_t fsw_dnode_create(struct fsw_dnode *parent_dno, fsw_u32 dnode_id, in
 
     // allocate memory for the structure
     status = fsw_alloc_zero(vol->fstype_table->dnode_struct_size, (void **)&dno);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
 
     // fill the structure
     dno->vol = vol;
-    dno->parent = parent_dno;
-    fsw_dnode_retain(dno->parent);
+
+    if (parent_dno != NULL) {
+        dno->parent = parent_dno;
+        fsw_dnode_retain(dno->parent);
+    }
+
     dno->dnode_id = dnode_id;
     dno->type = type;
     dno->refcount = 1;
-    status = fsw_strdup_coerce(&dno->name, vol->host_table->native_string_type, name);
-    if (status) {
-        fsw_free(dno);
-        return status;
+
+    if (name != NULL) {
+        status = fsw_strdup_coerce(&dno->name, vol->host_table->native_string_type, name);
+        if (status != FSW_SUCCESS) {
+            fsw_free(dno);
+            return status;
+	}
     }
 
     fsw_dnode_register(vol, dno);
 
     *dno_out = dno;
     return FSW_SUCCESS;
+}
+
+/**
+ * Create a dnode representing the root directory. This function is called by the file system
+ * driver while mounting the file system. The root directory is special because it has no parent
+ * dnode, its name is defined to be empty, and its type is also fixed. Otherwise, this functions
+ * behaves in the same way as fsw_dnode_create.
+ */
+
+fsw_status_t fsw_dnode_create_root(struct fsw_volume *vol, fsw_u32 dnode_id, struct fsw_dnode **dno_out)
+{
+    fsw_status_t    status;
+    struct fsw_dnode *dno;
+
+    status = fsw_dnode_create(NULL, dnode_id, FSW_DNODE_TYPE_DIR, NULL, &dno);
+    if (status == FSW_SUCCESS) {
+        fsw_dnode_register(vol, dno);
+        *dno_out = dno;
+}
+    return status;
+}
+
+int fsw_dnode_is_root(struct fsw_dnode *dno)
+{
+    if (dno->parent == NULL &&
+        dno->type == FSW_DNODE_TYPE_DIR &&
+	fsw_strlen(&dno->name) == 0) {
+        return 1;
+    }
+
+    return 0;
 }
 
 /**
