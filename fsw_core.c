@@ -334,8 +334,7 @@ fsw_status_t fsw_dnode_create_root(struct fsw_volume *vol, fsw_u32 dnode_id, str
     dno->dnode_id = dnode_id;
     dno->type = FSW_DNODE_TYPE_DIR;
     dno->refcount = 1;
-    dno->name.type = FSW_STRING_TYPE_EMPTY;
-    // TODO: instead, call a function to create an empty string in the native string type
+    fsw_string_setter(&dno->name, FSW_STRING_TYPE_EMPTY, 0, 0, NULL);
 
     fsw_dnode_register(vol, dno);
 
