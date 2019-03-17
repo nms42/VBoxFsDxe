@@ -431,8 +431,6 @@ fsw_status_t fsw_dnode_create(struct VOLSTRUCTNAME *vol, struct DNODESTRUCTNAME 
                               struct fsw_string *name, struct DNODESTRUCTNAME **dno_out);
 int          fsw_dnode_is_root(struct fsw_dnode *dno);
 
-fsw_status_t fsw_dnode_id_lookup(struct VOLSTRUCTNAME *vol, fsw_u32 id, struct fsw_dnode **child_dno_out);
-
 void         fsw_dnode_retain(struct fsw_dnode *dno);
 void         fsw_dnode_release(struct fsw_dnode *dno);
 
@@ -451,7 +449,7 @@ fsw_status_t fsw_dnode_readlink(struct fsw_dnode *dno, struct fsw_string *link_t
 fsw_status_t fsw_dnode_readlink_data(struct DNODESTRUCTNAME *dno, struct fsw_string *link_target);
 fsw_status_t fsw_dnode_resolve(struct fsw_dnode *dno, struct fsw_dnode **target_dno_out);
 
-fsw_status_t fsw_dnode_fullpath(struct fsw_dnode *dno, int stype, struct fsw_string_list **slist);
+fsw_status_t fsw_dnode_id_fullpath(fsw_u32 dnid, int stype, struct fsw_string_list **slist);
 
 /*@}*/
 
