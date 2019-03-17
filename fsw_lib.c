@@ -546,4 +546,26 @@ void fsw_strfree(struct fsw_string *s)
     s->type = FSW_STRING_TYPE_EMPTY;
 }
 
+void fsw_string_list_free(struct fsw_string_list *lst)
+{
+	struct fsw_string_list *next;
+
+	if (lst == NULL)
+		return;
+
+	for (next = lst->flink; next != NULL; lst = next, next = next->flink) {
+		fsw_strfree(lst->str);
+		fsw_free(lst);
+	}
+}
+
+void fsw_string_list_prepend(struct fsw_string_list *lst, struct fsw_string *str)
+{
+	struct fsw_string_list *fresh;
+
+	(void) fsw_alloc(sizeof (*fresh), &fresh);	// XXX: ignore failures
+	fresh->str = str;
+	fresh->flink = lst;
+}
+
 // EOF
