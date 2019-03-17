@@ -342,15 +342,15 @@ fsw_status_t fsw_dnode_create_root(struct fsw_volume *vol, fsw_u32 dnode_id, str
     return FSW_SUCCESS;
 }
 
-fsw_status_t fsw_dnode_is_root(struct fsw_dnode *dno)
+int fsw_dnode_is_root(struct fsw_dnode *dno)
 {
     if (dno->parent == NULL &&
         dno->type == FSW_DNODE_TYPE_DIR &&
 	fsw_strlen(&dno->name) == 0) {
-        return FSW_SUCCESS;
+        return 1;
     }
 
-    return FSW_NOT_FOUND;
+    return 0;
 }
 
 /**

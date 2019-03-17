@@ -429,6 +429,7 @@ void         fsw_block_release(struct VOLSTRUCTNAME *vol, fsw_u32 phys_bno, void
 fsw_status_t fsw_dnode_create_root(struct VOLSTRUCTNAME *vol, fsw_u32 dnode_id, struct DNODESTRUCTNAME **dno_out);
 fsw_status_t fsw_dnode_create(struct DNODESTRUCTNAME *parent_dno, fsw_u32 dnode_id, int type,
                               struct fsw_string *name, struct DNODESTRUCTNAME **dno_out);
+int          fsw_dnode_is_root(struct fsw_dnode *dno);
 
 fsw_status_t fsw_dnode_id_lookup(struct VOLSTRUCTNAME *vol, fsw_u32 id, struct fsw_dnode **child_dno_out);
 
