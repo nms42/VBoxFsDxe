@@ -450,7 +450,7 @@ fsw_status_t fsw_dnode_readlink(struct fsw_dnode *dno, struct fsw_string *link_t
 fsw_status_t fsw_dnode_readlink_data(struct DNODESTRUCTNAME *dno, struct fsw_string *link_target);
 fsw_status_t fsw_dnode_resolve(struct fsw_dnode *dno, struct fsw_dnode **target_dno_out);
 
-fsw_status_t fsw_dnode_fullpath(struct fsw_dnode *dno, struct fsw_string_list **slist);
+fsw_status_t fsw_dnode_fullpath(struct fsw_dnode *dno, int stype, struct fsw_string_list **slist);
 
 /*@}*/
 
