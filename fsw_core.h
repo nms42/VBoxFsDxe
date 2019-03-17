@@ -494,7 +494,7 @@ void         fsw_strsplit(struct fsw_string *lookup_name, struct fsw_string *buf
 void         fsw_strfree(struct fsw_string *s);
 fsw_u16      fsw_to_lower(fsw_u16 ch);
 
-void         fsw_string_list_prepend(struct fsw_string_list *lst, struct fsw_string *str);
+struct fsw_string_list *fsw_string_list_prepend(struct fsw_string_list *lst, struct fsw_string *str);
 void         fsw_string_list_free(struct fsw_string_list *lst);
 /*@}*/
 
