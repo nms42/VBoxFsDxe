@@ -51,7 +51,7 @@ static struct fsw_fstype_table *fstypes[] = {
 
 FILE* outfile = NULL;
 
-static int
+void
 catfile(struct fsw_posix_volume *pvol, char *path)
 {
     struct fsw_posix_file *pfile;
@@ -61,7 +61,7 @@ catfile(struct fsw_posix_volume *pvol, char *path)
     pfile = fsw_posix_open(pvol, path, 0, 0);
     if (pfile == NULL) {
         fprintf(stderr, "open(%s) call failed.\n", path);
-        return 1;
+        return;
     }
     while ((r = fsw_posix_read(pfile, buf, sizeof(buf))) > 0)
     {
@@ -69,11 +69,14 @@ catfile(struct fsw_posix_volume *pvol, char *path)
         (void) fwrite(buf, r, 1, outfile);
     }
     fsw_posix_close(pfile);
-
-    return 0;
 }
 
-static int
+void
+id2path(struct fsw_posix_volume *pvol, char *idnum)
+{
+}
+
+void
 viewdir(struct fsw_posix_volume *pvol, char *path, int level, int rflag, int docat)
 {
     struct fsw_posix_dir *dir;
@@ -84,7 +87,7 @@ viewdir(struct fsw_posix_volume *pvol, char *path, int level, int rflag, int doc
     dir = fsw_posix_opendir(pvol, path);
     if (dir == NULL) {
         fprintf(stderr, "opendir(%s) call failed.\n", path);
-        return 1;
+        return;
     }
     while ((dent = fsw_posix_readdir(dir)) != NULL) {
         if (outfile != NULL) {
@@ -102,21 +105,19 @@ viewdir(struct fsw_posix_volume *pvol, char *path, int level, int rflag, int doc
         }
     }
     fsw_posix_closedir(dir);
-
-    return 0;
 }
 
 void
 usage(char* pname)
 {
-    fprintf(stderr, "Usage: %s <file/device> l|c[r] dir|file\n", pname);
+    fprintf(stderr, "Usage: %s <file/device> i|l|c[r] dir|file\n", pname);
     exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
-    int lflag, cflag, rflag;
+    int cflag, iflag, lflag, rflag;
     struct fsw_posix_volume *pvol = NULL;
     int i;
     char* cp;
@@ -126,15 +127,18 @@ main(int argc, char *argv[])
         usage(argv[0]);
     }
 
-    lflag = cflag = rflag = 0;
+    cflag = iflag = lflag = rflag = 0;
 
     for (cp = argv[2]; *cp != '\0'; cp++) {
         switch (*cp) {
-        case 'l':
-            lflag = 1;
-            break;
         case 'c':
             cflag = 1;
+            break;
+        case 'i':
+            iflag = 1;
+            break;
+        case 'l':
+            lflag = 1;
             break;
         case 'r':
             rflag = 1;
@@ -157,10 +161,12 @@ main(int argc, char *argv[])
     outfile = stdout;
 
     for (i = 0; i < ITERATIONS; i++) {
-        if (lflag) {
-            viewdir(pvol, argv[3], 0, rflag, cflag);
-        } else if (cflag) {
+        if (cflag) {
             catfile(pvol, argv[3]);
+        } else if (iflag) {
+            id2path(pvol, argv[3]);
+	} else if (lflag) {
+            viewdir(pvol, argv[3], 0, rflag, cflag);
         }
     }
 
