@@ -41,7 +41,10 @@
 #define ITERATIONS 1
 #endif
 
-void  usage(char* pname);
+void usage(char* pname);
+void catfile(struct fsw_posix_volume *pvol, char *path);
+void id2path(struct fsw_posix_volume *pvol, char *idnum);
+void viewdir(struct fsw_posix_volume *pvol, char *path, int level, int rflag, int docat);
 
 extern struct fsw_fstype_table FSW_FSTYPE_TABLE_NAME(FSTYPE);
 
@@ -74,6 +77,17 @@ catfile(struct fsw_posix_volume *pvol, char *path)
 void
 id2path(struct fsw_posix_volume *pvol, char *idnum)
 {
+    fsw_status_t status;
+    struct fsw_string_list *path;
+    fsw_u32 dnid;
+
+    path = NULL;
+    dnid = (fsw_u32) atol(idnum);
+    status = fsw_dnode_id_fullpath(pvol->vol, dnid, FSW_STRING_TYPE_UTF8, &path);
+
+    if (status != FSW_SUCCESS) {
+        fprintf(stderr, "fsw_dnode_id_fullpath(%u) returned %d.\n", dnid, status);
+    }
 }
 
 void
@@ -117,67 +131,67 @@ usage(char* pname)
 int
 main(int argc, char *argv[])
 {
-    int cflag, iflag, lflag, rflag;
-    struct fsw_posix_volume *pvol = NULL;
-    int i;
-    char* cp;
-    struct fsw_fstype_table* fst;
-
-    if (argc != 4) {
+  int cflag, iflag, lflag, rflag;
+  struct fsw_posix_volume *pvol = NULL;
+  int i;
+  char* cp;
+  struct fsw_fstype_table* fst;
+  
+  if (argc != 4) {
+    usage(argv[0]);
+  }
+  
+  cflag = iflag = lflag = rflag = 0;
+  
+  for (cp = argv[2]; *cp != '\0'; cp++) {
+    switch (*cp) {
+      case 'c':
+        cflag = 1;
+        break;
+      case 'i':
+        iflag = 1;
+        break;
+      case 'l':
+        lflag = 1;
+        break;
+      case 'r':
+        rflag = 1;
+        break;
+      default:
         usage(argv[0]);
     }
-
-    cflag = iflag = lflag = rflag = 0;
-
-    for (cp = argv[2]; *cp != '\0'; cp++) {
-        switch (*cp) {
-        case 'c':
-            cflag = 1;
-            break;
-        case 'i':
-            iflag = 1;
-            break;
-        case 'l':
-            lflag = 1;
-            break;
-        case 'r':
-            rflag = 1;
-            break;
-        default:
-            usage(argv[0]);
-        }
+  }
+  
+  fst = fstypes[0];
+  pvol = fsw_posix_mount(argv[1], fst);
+  
+  if (pvol != NULL) {
+    fprintf(stdout, "Mounted as '%s'.\n", (char *)pvol->vol->label.data);
+  } else {
+    fprintf(stderr, "Mounting failed.\n");
+    return 1;
+  }
+  
+  outfile = stdout;
+  
+  for (i = 0; i < ITERATIONS; i++) {
+    if (cflag) {
+      catfile(pvol, argv[3]);
+    } else if (iflag) {
+      id2path(pvol, argv[3]);
+    } else if (lflag) {
+      viewdir(pvol, argv[3], 0, rflag, cflag);
     }
-
-    fst = fstypes[0];
-    pvol = fsw_posix_mount(argv[1], fst);
-
-    if (pvol != NULL) {
-        fprintf(stdout, "Mounted as '%s'.\n", (char *)pvol->vol->label.data);
-    } else {
-        fprintf(stderr, "Mounting failed.\n");
-        return 1;
-    }
-
-    outfile = stdout;
-
-    for (i = 0; i < ITERATIONS; i++) {
-        if (cflag) {
-            catfile(pvol, argv[3]);
-        } else if (iflag) {
-            id2path(pvol, argv[3]);
-	} else if (lflag) {
-            viewdir(pvol, argv[3], 0, rflag, cflag);
-        }
-    }
-
-    fsw_posix_unmount(pvol);
-
-    if (outfile != NULL) {
-        (void) fclose (outfile);
-    }
-    (void) fclose (stdout);
-    (void) fclose (stderr);
-    return 0;
+  }
+  
+  fsw_posix_unmount(pvol);
+  
+  if (outfile != NULL) {
+    (void) fclose (outfile);
+  }
+  (void) fclose (stdout);
+  (void) fclose (stderr);
+  return 0;
 }
 
 // EOF
