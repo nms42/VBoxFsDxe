@@ -1092,7 +1092,7 @@ create_hfs_dnode (
   struct fsw_hfs_dnode *baby;
 
   status =
-    fsw_dnode_create (dno, file_info->id, file_info->type, file_info->name,
+    fsw_dnode_create (dno->g.vol, dno, file_info->id, file_info->type, file_info->name,
                       &baby);
   if (status)
     return status;
