@@ -311,6 +311,18 @@ static void fsw_dnode_register(struct fsw_volume *vol, struct fsw_dnode *dno)
     vol->dnode_head = dno;
 }
 
+static struct fsw_dnode *fsw_vol_lookup_dnode(struct fsw_volume *vol, fsw_u32 dnode_id) {
+    struct fsw_dnode *dno;
+
+    for (dno = vol->dnode_head; dno != NULL; dno = dno->next) {
+        if (dno->dnode_id == dnode_id) {
+            return dno;
+        }
+    }
+
+    return NULL;
+}
+
 /**
  * Create a new dnode representing a file system object. This function is called by
  * the file system driver in response to directory lookup or read requests. Note that
@@ -337,12 +349,12 @@ fsw_status_t fsw_dnode_create(struct fsw_dnode *parent_dno, fsw_u32 dnode_id, in
     struct fsw_dnode *dno;
 
     // check if we already have a dnode with the same id
-    for (dno = vol->dnode_head; dno != NULL; dno = dno->next) {
-        if (dno->dnode_id == dnode_id) {
-            fsw_dnode_retain(dno);
-            *dno_out = dno;
-            return FSW_SUCCESS;
-        }
+    dno = fsw_vol_lookup_dnode(vol, dnode_id);
+
+    if (dno != NULL) {
+        fsw_dnode_retain(dno);
+        *dno_out = dno;
+        return FSW_SUCCESS;
     }
 
     // allocate memory for the structure
