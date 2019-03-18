@@ -42,6 +42,7 @@
 
 // functions
 
+static struct fsw_dnode *fsw_vol_lookup_dnode_id(struct fsw_volume *vol, fsw_u32 dnode_id);
 static void fsw_blockcache_free(struct fsw_volume *vol);
 
 #define MAX_CACHE_LEVEL (5)
@@ -311,7 +312,7 @@ static void fsw_dnode_register(struct fsw_volume *vol, struct fsw_dnode *dno)
     vol->dnode_head = dno;
 }
 
-static struct fsw_dnode *fsw_vol_lookup_dnode(struct fsw_volume *vol, fsw_u32 dnode_id) {
+static struct fsw_dnode *fsw_vol_lookup_dnode_id(struct fsw_volume *vol, fsw_u32 dnode_id) {
     struct fsw_dnode *dno;
 
     for (dno = vol->dnode_head; dno != NULL; dno = dno->next) {
@@ -348,7 +349,7 @@ fsw_status_t fsw_dnode_create(struct fsw_volume *vol, struct fsw_dnode *parent_d
     struct fsw_dnode *dno;
 
     // check if we already have a dnode with the same id
-    dno = fsw_vol_lookup_dnode(vol, dnode_id);
+    dno = fsw_vol_lookup_dnode_id(vol, dnode_id);
 
     if (dno != NULL) {
         fsw_dnode_retain(dno);
@@ -370,7 +371,7 @@ fsw_status_t fsw_dnode_create(struct fsw_volume *vol, struct fsw_dnode *parent_d
     }
 
     dno->dnode_id = dnode_id;
-    dno->type = type;
+    dno->dtype = type;
     dno->refcount = 1;
 
     if (name != NULL) {
@@ -401,6 +402,7 @@ fsw_status_t fsw_dnode_create_root(struct fsw_volume *vol, fsw_u32 dnode_id, str
 
     status = fsw_dnode_create(vol, NULL, dnode_id, FSW_DNODE_TYPE_DIR, NULL, &dno);
     if (status == FSW_SUCCESS) {
+        dno->parent_id = dnode_id;
         *dno_out = dno;
     }
     return status;
@@ -408,13 +410,14 @@ fsw_status_t fsw_dnode_create_root(struct fsw_volume *vol, fsw_u32 dnode_id, str
 
 int fsw_dnode_is_root(struct fsw_dnode *dno)
 {
-    if (dno->parent == NULL &&
-        dno->type == FSW_DNODE_TYPE_DIR &&
-	fsw_strlen(&dno->name) == 0) {
-        return 1;
-    }
-
-    return 0;
+  if (dno->parent == NULL &&
+      dno->dtype == FSW_DNODE_TYPE_DIR &&
+      dno->dnode_id == dno->parent_id &&
+      fsw_strlen(&dno->name) == 0) {
+    return 1;
+  }
+  
+  return 0;
 }
 
 /**
@@ -459,7 +462,7 @@ void fsw_dnode_release(struct fsw_dnode *dno)
         vol->dnode_head = dno->next;
 
 #if defined(FSW_DNODE_CACHE_SIZE) && FSW_DNODE_CACHE_SIZE > 0
-    if (dno->type == FSW_DNODE_TYPE_DIR) {
+    if (dno->dtype == FSW_DNODE_TYPE_DIR) {
         int i;
 
         for (i = 0; i < FSW_DNODE_CACHE_SIZE; i++) {
@@ -556,7 +559,7 @@ fsw_status_t fsw_dnode_lookup_cache(struct fsw_dnode *dno,
         goto errorexit;
 
     // make sure we operate on a directory
-    if (dno->type != FSW_DNODE_TYPE_DIR) {
+    if (dno->dtype != FSW_DNODE_TYPE_DIR) {
         status = FSW_UNSUPPORTED;
         goto errorexit;
     }
@@ -646,7 +649,7 @@ fsw_status_t fsw_dnode_lookup(struct fsw_dnode *dno,
         goto errorexit;
 
     // resolve symlink if necessary
-    if (dno->type == FSW_DNODE_TYPE_SYMLINK) {
+    if (dno->dtype == FSW_DNODE_TYPE_SYMLINK) {
         status = fsw_dnode_resolve(dno, &child_dno);
         if (status)
             goto errorexit;
@@ -663,7 +666,7 @@ fsw_status_t fsw_dnode_lookup(struct fsw_dnode *dno,
     }
 
     // make sure we operate on a directory
-    if (dno->type != FSW_DNODE_TYPE_DIR) {
+    if (dno->dtype != FSW_DNODE_TYPE_DIR) {
         status = FSW_UNSUPPORTED;
         goto errorexit;
     }
@@ -777,7 +780,7 @@ fsw_status_t fsw_dnode_dir_read(struct fsw_shandle *shand, struct fsw_dnode **ch
     struct fsw_dnode *dno = shand->dnode;
     fsw_u64         saved_pos;
 
-    if (dno->type != FSW_DNODE_TYPE_DIR)
+    if (dno->dtype != FSW_DNODE_TYPE_DIR)
         return FSW_UNSUPPORTED;
 
     saved_pos = shand->pos;
@@ -804,7 +807,7 @@ fsw_status_t fsw_dnode_readlink(struct fsw_dnode *dno, struct fsw_string *target
     status = fsw_dnode_fill(dno);
     if (status)
         return status;
-    if (dno->type != FSW_DNODE_TYPE_SYMLINK)
+    if (dno->dtype != FSW_DNODE_TYPE_SYMLINK)
         return FSW_UNSUPPORTED;
 
     return dno->vol->fstype_table->readlink(dno->vol, dno, target_name);
@@ -877,7 +880,7 @@ fsw_status_t fsw_dnode_resolve(struct fsw_dnode *dno, struct fsw_dnode **target_
         status = fsw_dnode_fill(dno);
         if (status)
             goto errorexit;
-        if (dno->type != FSW_DNODE_TYPE_SYMLINK) {
+        if (dno->dtype != FSW_DNODE_TYPE_SYMLINK) {
             // found a non-symlink target, return it
             *target_dno_out = dno;
             return FSW_SUCCESS;
@@ -980,7 +983,7 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
     buffer = buffer_in;
     buflen = *buffer_size_inout;
     pos = (fsw_u32)shand->pos;
-    cache_level = (dno->type != FSW_DNODE_TYPE_FILE) ? 1 : 0;
+    cache_level = (dno->dtype != FSW_DNODE_TYPE_FILE) ? 1 : 0;
     // restrict read to file size
     if (buflen > dno->size - pos)
         buflen = (fsw_u32)(dno->size - pos);
@@ -1051,12 +1054,53 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
 
 fsw_status_t fsw_dnode_id_lookup(struct VOLSTRUCTNAME *vol, fsw_u32 dnid, struct fsw_dnode **dn_out)
 {
+	struct fsw_dnode *dn;
+
+	dn = fsw_vol_lookup_dnode_id(vol, dnid);
+
+	if (dn != NULL) {
+		*dn_out = dn;
+		return FSW_SUCCESS;
+	}
+
 	return FSW_NOT_FOUND;
 }
 
 fsw_status_t fsw_dnode_id_fullpath(struct fsw_volume *vol, fsw_u32 dnid, int stype, struct fsw_string_list **slist)
 {
-	return FSW_NOT_FOUND;
+	fsw_status_t status;
+	struct fsw_dnode *dn;
+	struct fsw_string_list *slst;
+	struct fsw_string *name;
+
+	slst = NULL;
+	status = fsw_dnode_id_lookup(vol, dnid, &dn);
+
+	while (status == FSW_SUCCESS && !fsw_dnode_is_root(dn)) {
+		status = fsw_alloc(sizeof(*name), &name);
+
+		if (status != FSW_SUCCESS)
+			break;
+
+		fsw_string_setter(name, stype, 0, 0, NULL);
+		status = fsw_strdup_coerce(name, stype, &dn->name);
+
+		if (status != FSW_SUCCESS)
+			break;
+
+		slst = fsw_string_list_prepend(slst, name);
+
+		dnid = dn->parent_id;
+		status = fsw_dnode_id_lookup(vol, dnid, &dn);
+	}
+
+	if (status != FSW_SUCCESS) {
+		fsw_string_list_free(slst);
+	} else {
+		*slist = slst;
+	}
+
+	return status;
 }
 
 // EOF

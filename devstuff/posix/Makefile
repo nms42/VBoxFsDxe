@@ -26,4 +26,4 @@ clean:
 	/bin/rm -fr a.out* *.plist *.o *.gmon
 
 cppcheck:
-	cppcheck -I${PSRC} -I${VSRC} ${CFLAGS} ${SRCS}
+	cppcheck --enable=all --inconclusive --std=posix -I${PSRC} -I${VSRC} ${CFLAGS} ${SRCS}

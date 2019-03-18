@@ -81,7 +81,6 @@ struct fsw_posix_volume * fsw_posix_mount(const char *path, struct fsw_fstype_ta
     status = fsw_alloc_zero(sizeof(struct fsw_posix_volume), (void **)&pvol);
     if (status)
         return NULL;
-    pvol->fd = -1;
 
     // open underlying file/device
     pvol->fd = open(path, O_RDONLY | O_BINARY, 0);
@@ -248,7 +247,7 @@ struct dirent * fsw_posix_readdir(struct fsw_posix_dir *dir)
     // fill dirent structure
     dent.d_fileno = dno->dnode_id;
     dent.d_reclen = 8 + dno->name.size + 1;
-    switch (dno->type) {
+    switch (dno->dtype) {
         case FSW_DNODE_TYPE_FILE:
             dent.d_type = DT_REG;
             break;
@@ -330,7 +329,7 @@ fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path,
         fsw_dnode_release(dno);
         return status;
     }
-    if (dno->type != required_type) {
+    if (dno->dtype != required_type) {
         fprintf(stderr, "fsw_posix_open_dno: dnode is not of the requested type\n");
         fsw_dnode_release(dno);
         return FSW_UNSUPPORTED;

@@ -167,13 +167,9 @@ struct DNODESTRUCTNAME;
 
 /**
  * Status code type, returned from all functions that can fail.
- */
-typedef int fsw_status_t;
-
-/**
  * Possible status codes.
  */
-enum {
+typedef enum {
     FSW_SUCCESS,
     FSW_OUT_OF_MEMORY,
     FSW_IO_ERROR,
@@ -181,7 +177,7 @@ enum {
     FSW_NOT_FOUND,
     FSW_VOLUME_CORRUPTED,
     FSW_UNKNOWN_ERROR
-};
+} fsw_status_t;
 
 
 /**
@@ -259,6 +255,18 @@ struct fsw_volume {
 };
 
 /**
+ * Possible dnode types. FSW_DNODE_TYPE_UNKNOWN may only be used before
+ * fsw_dnode_fill has been called on the dnode.
+ */
+typedef enum {
+    FSW_DNODE_TYPE_UNKNOWN,
+    FSW_DNODE_TYPE_FILE,
+    FSW_DNODE_TYPE_DIR,
+    FSW_DNODE_TYPE_SYMLINK,
+    FSW_DNODE_TYPE_SPECIAL
+} dnode_type_t;
+
+/**
  * Core: Represents a "directory node" - a file, directory, symlink, whatever.
  */
 
@@ -270,7 +278,8 @@ struct fsw_dnode {
     struct fsw_string name;         //!< Name of this item in the parent directory
 
     fsw_u32     dnode_id;           //!< Unique id number (usually the inode number)
-    int         type;               //!< Type of the dnode - file, dir, symlink, special
+    fsw_u32     parent_id;          //!< Unique id number (usually the inode number)
+    dnode_type_t dtype;             //!< Type of the dnode - file, dir, symlink, special
     fsw_u64     size;               //!< Data size in bytes
 
     struct fsw_dnode *next;         //!< Doubly-linked list of all dnodes: previous dnode
@@ -280,18 +289,6 @@ struct fsw_dnode {
     fsw_u32    numcslots;                          //!< Number of slots occupied
     struct fsw_dnode *cache[FSW_DNODE_CACHE_SIZE]; //!< Rudimentary cache for directory lookups
 #endif
-};
-
-/**
- * Possible dnode types. FSW_DNODE_TYPE_UNKNOWN may only be used before
- * fsw_dnode_fill has been called on the dnode.
- */
-enum {
-    FSW_DNODE_TYPE_UNKNOWN,
-    FSW_DNODE_TYPE_FILE,
-    FSW_DNODE_TYPE_DIR,
-    FSW_DNODE_TYPE_SYMLINK,
-    FSW_DNODE_TYPE_SPECIAL
 };
 
 /**
@@ -462,7 +459,7 @@ fsw_status_t fsw_dnode_id_fullpath(struct VOLSTRUCTNAME *vol, fsw_u32 dnid, int 
 
 fsw_status_t fsw_shandle_open(struct DNODESTRUCTNAME *dno, struct fsw_shandle *shand);
 void         fsw_shandle_close(struct fsw_shandle *shand);
-fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_inout, void *buffer);
+fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_inout, void *buffer_in);
 
 /*@}*/
 
@@ -488,7 +485,7 @@ int          fsw_streq(struct fsw_string *s1, struct fsw_string *s2);
 int          fsw_streq_cstr(struct fsw_string *s1, const char *s2);
 void         fsw_string_setter(struct fsw_string *dest, int type, int len, int size, void *data);
 fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, int type, struct fsw_string *src);
-void         fsw_strsplit(struct fsw_string *lookup_name, struct fsw_string *buffer, char separator);
+void         fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char separator);
 
 void         fsw_strfree(struct fsw_string *s);
 fsw_u16      fsw_to_lower(fsw_u16 ch);

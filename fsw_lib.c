@@ -561,7 +561,7 @@ struct fsw_string_list* fsw_string_list_prepend(struct fsw_string_list *lst, str
 {
 	struct fsw_string_list *fresh;
 
-	(void) fsw_alloc(sizeof (*fresh), &fresh);	// XXX: ignore failures
+	(void) fsw_alloc(sizeof (*fresh), &fresh);	// XXX: ignore failures?
 	fresh->str = str;
 	fresh->flink = lst;
 	return fresh;

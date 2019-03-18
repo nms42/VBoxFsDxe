@@ -78,19 +78,19 @@ static fsw_status_t fsw_hfs_dir_lookup (
   struct fsw_hfs_volume *vol,
   struct fsw_hfs_dnode *dno,
   struct fsw_string *lookup_name,
-  struct fsw_hfs_dnode **child_dno
+  struct fsw_hfs_dnode **child_dno_out
 );
 static fsw_status_t fsw_hfs_dir_read (
   struct fsw_hfs_volume *vol,
   struct fsw_hfs_dnode *dno,
   struct fsw_shandle *shand,
-  struct fsw_hfs_dnode **child_dno
+  struct fsw_hfs_dnode **child_dno_out
 );
 
 static fsw_status_t fsw_hfs_readlink (
   struct fsw_hfs_volume *vol,
   struct fsw_hfs_dnode *dno,
-  struct fsw_string *link
+  struct fsw_string *link_target
 );
 
 //
@@ -1276,7 +1276,7 @@ fsw_hfs_readlink (
     link_target->type = FSW_STRING_TYPE_ISO88591;
     link_target->size = MPRFSIZE;
     fsw_memdup (&link_target->data, metaprefix, link_target->size);
-    sz = (fsw_u32) fsw_snprintf(((char *) link_target->data) + MPRFINUM, 10, "%d", dno->ilink);
+    sz = (fsw_u32) fsw_snprintf(((char *) link_target->data) + MPRFINUM, 10, "%d", (int)dno->ilink);
     link_target->len = MPRFINUM + sz;
     return FSW_SUCCESS;
 #undef MPRFINUM
