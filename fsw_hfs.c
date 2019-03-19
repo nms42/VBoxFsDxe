@@ -432,11 +432,17 @@ fsw_hfs_volume_stat (
 
 static fsw_status_t
 fsw_hfs_dnode_fill (
-  struct fsw_hfs_volume *vol,
-  struct fsw_hfs_dnode *dno
-)
+					struct fsw_hfs_volume *vol,
+					struct fsw_hfs_dnode *dno
+					)
 {
-  return FSW_SUCCESS;
+	if (fsw_dnode_is_root(&dno->g))
+		return FSW_SUCCESS;
+	
+	if (dno->g.dtype != FSW_DNODE_TYPE_UNKNOWN)
+		return FSW_SUCCESS;
+	
+	return FSW_NOT_FOUND;
 }
 
 /**
