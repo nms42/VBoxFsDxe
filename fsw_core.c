@@ -500,9 +500,12 @@ void fsw_dnode_release(struct fsw_dnode *dno)
 
 fsw_status_t fsw_dnode_fill(struct fsw_dnode *dno)
 {
-    // TODO: check a flag right here, call fstype's dnode_fill only once per dnode
-
-    return dno->vol->fstype_table->dnode_fill(dno->vol, dno);
+  // TODO: check a flag right here, call fstype's dnode_fill only once per dnode
+  
+  if (dno->parent_id == 0 && dno->parent != NULL)
+    dno->parent_id = dno->parent->dnode_id;
+  
+  return dno->vol->fstype_table->dnode_fill(dno->vol, dno);
 }
 
 /**
@@ -785,7 +788,7 @@ fsw_status_t fsw_dnode_dir_read(struct fsw_shandle *shand, struct fsw_dnode **ch
 
     saved_pos = shand->pos;
     status = dno->vol->fstype_table->dir_read(dno->vol, dno, shand, child_dno_out);
-    if (status)
+    if (status != FSW_SUCCESS)
         shand->pos = saved_pos;
     return status;
 }
@@ -1054,53 +1057,64 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
 
 fsw_status_t fsw_dnode_id_lookup(struct VOLSTRUCTNAME *vol, fsw_u32 dnid, struct fsw_dnode **dn_out)
 {
-	struct fsw_dnode *dn;
-
-	dn = fsw_vol_lookup_dnode_id(vol, dnid);
-
-	if (dn != NULL) {
-		*dn_out = dn;
-		return FSW_SUCCESS;
-	}
-
-	return FSW_NOT_FOUND;
+  fsw_status_t status;
+  struct fsw_dnode *dn;
+  
+  dn = fsw_vol_lookup_dnode_id(vol, dnid);
+  
+  if (dn != NULL) {
+    *dn_out = dn;
+    return FSW_SUCCESS;
+  }
+  
+  status = fsw_dnode_create(vol, NULL, dnid, FSW_DNODE_TYPE_UNKNOWN, NULL, &dn);
+  
+  if (status != FSW_SUCCESS)
+    return status;
+  
+  status = fsw_dnode_fill(dn);
+  
+  if (status != FSW_SUCCESS) {
+    fsw_dnode_release(dn);
+    return status;
+  }
+  
+  *dn_out = dn;
+  return FSW_SUCCESS;
 }
 
 fsw_status_t fsw_dnode_id_fullpath(struct fsw_volume *vol, fsw_u32 dnid, int stype, struct fsw_string_list **slist)
 {
-	fsw_status_t status;
-	struct fsw_dnode *dn;
-	struct fsw_string_list *slst;
-	struct fsw_string *name;
-
-	slst = NULL;
-	status = fsw_dnode_id_lookup(vol, dnid, &dn);
-
-	while (status == FSW_SUCCESS && !fsw_dnode_is_root(dn)) {
-		status = fsw_alloc(sizeof(*name), &name);
-
-		if (status != FSW_SUCCESS)
-			break;
-
-		fsw_string_setter(name, stype, 0, 0, NULL);
-		status = fsw_strdup_coerce(name, stype, &dn->name);
-
-		if (status != FSW_SUCCESS)
-			break;
-
-		slst = fsw_string_list_prepend(slst, name);
-
-		dnid = dn->parent_id;
-		status = fsw_dnode_id_lookup(vol, dnid, &dn);
-	}
-
-	if (status != FSW_SUCCESS) {
-		fsw_string_list_free(slst);
-	} else {
-		*slist = slst;
-	}
-
-	return status;
+  fsw_status_t status;
+  struct fsw_dnode *dn;
+  struct fsw_string_list *slst;
+  struct fsw_string *name;
+  
+  slst = NULL;
+  status = fsw_dnode_id_lookup(vol, dnid, &dn);
+  
+  while (status == FSW_SUCCESS && !fsw_dnode_is_root(dn)) {
+    status = fsw_alloc(sizeof(*name), &name);
+    
+    if (status == FSW_SUCCESS) {
+      fsw_string_setter(name, stype, 0, 0, NULL);
+      status = fsw_strdup_coerce(name, stype, &dn->name);
+      
+      if (status == FSW_SUCCESS) {
+        slst = fsw_string_list_prepend(slst, name);
+        dnid = dn->parent_id;
+        status = fsw_dnode_id_lookup(vol, dnid, &dn);
+      }
+    }
+  }
+  
+  if (status != FSW_SUCCESS) {
+    fsw_string_list_free(slst);
+    return status;
+  }
+  
+  *slist = slst;
+  return FSW_SUCCESS;
 }
 
 // EOF
