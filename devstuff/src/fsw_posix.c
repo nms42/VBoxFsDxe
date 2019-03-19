@@ -46,7 +46,7 @@
 
 // function prototypes
 
-fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, int required_type,
+fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, dnode_type_t required_type,
                                 struct fsw_shandle *shand);
 
 void fsw_posix_change_blocksize(struct fsw_volume *vol,
@@ -226,49 +226,48 @@ struct fsw_posix_dir * fsw_posix_opendir(struct fsw_posix_volume *pvol, const ch
 
 struct dirent * fsw_posix_readdir(struct fsw_posix_dir *dir)
 {
-    fsw_status_t        status;
-    struct fsw_dnode    *dno;
-    static struct dirent dent;
-
-    // get next entry from file system
-    status = fsw_dnode_dir_read(&dir->shand, &dno);
-    if (status) {
-        if (status != 4)
-            fprintf(stderr, "fsw_posix_readdir: fsw_dnode_dir_read returned %d\n", status);
-        return NULL;
-    }
-    status = fsw_dnode_fill(dno);
-    if (status) {
-        fprintf(stderr, "fsw_posix_readdir: fsw_dnode_fill returned %d\n", status);
-        fsw_dnode_release(dno);
-        return NULL;
-    }
-
-    // fill dirent structure
-    dent.d_fileno = dno->dnode_id;
-    dent.d_reclen = 8 + dno->name.size + 1;
-    switch (dno->dtype) {
-        case FSW_DNODE_TYPE_FILE:
-            dent.d_type = DT_REG;
-            break;
-        case FSW_DNODE_TYPE_DIR:
-            dent.d_type = DT_DIR;
-            break;
-        case FSW_DNODE_TYPE_SYMLINK:
-            dent.d_type = DT_LNK;
-            break;
-        default:
-            dent.d_type = DT_UNKNOWN;
-            break;
-    }
-#if 1
-    dent.d_namlen = dno->name.size;
-#endif
-    memcpy(dent.d_name, dno->name.data, dno->name.size);
-    dent.d_name[dno->name.size] = 0;
+  fsw_status_t        status;
+  struct fsw_dnode    *dno;
+  static struct dirent dent;
+  
+  // get next entry from file system
+  status = fsw_dnode_dir_read(&dir->shand, &dno);
+  if (status != FSW_SUCCESS) {
+    fprintf(stderr, "fsw_posix_readdir: fsw_dnode_dir_read returned %d\n", status);
+    return NULL;
+  }
+  status = fsw_dnode_fill(dno);
+  if (status) {
+    fprintf(stderr, "fsw_posix_readdir: fsw_dnode_fill returned %d\n", status);
     fsw_dnode_release(dno);
-
-    return &dent;
+    return NULL;
+  }
+  
+  // fill dirent structure
+  dent.d_fileno = dno->dnode_id;
+  dent.d_reclen = 8 + dno->name.size + 1;
+  switch (dno->dtype) {
+    case FSW_DNODE_TYPE_FILE:
+      dent.d_type = DT_REG;
+      break;
+    case FSW_DNODE_TYPE_DIR:
+      dent.d_type = DT_DIR;
+      break;
+    case FSW_DNODE_TYPE_SYMLINK:
+      dent.d_type = DT_LNK;
+      break;
+    default:
+      dent.d_type = DT_UNKNOWN;
+      break;
+  }
+#if 1
+  dent.d_namlen = dno->name.size;
+#endif
+  memcpy(dent.d_name, dno->name.data, dno->name.size);
+  dent.d_name[dno->name.size] = 0;
+  fsw_dnode_release(dno);
+  
+  return &dent;
 }
 
 /**
@@ -295,7 +294,7 @@ int fsw_posix_closedir(struct fsw_posix_dir *dir)
  * Open a shand of a required type by path.
  */
 
-fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, int required_type, struct fsw_shandle *shand)
+fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, dnode_type_t required_type, struct fsw_shandle *shand)
 {
     fsw_status_t        status;
     struct fsw_dnode    *dno;
