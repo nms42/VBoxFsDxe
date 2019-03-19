@@ -27,7 +27,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		C4D7528522355D3800BF4213 /* fsw_hfs.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = fsw_hfs.c; path = ../../fsw_hfs.c; sourceTree = "<group>"; };
+		C4D7528522355D3800BF4213 /* fsw_hfs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = fsw_hfs.c; path = ../../fsw_hfs.c; sourceTree = "<group>"; };
 		C4D7528622355D3800BF4213 /* fsw_posix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = fsw_posix.c; path = ../src/fsw_posix.c; sourceTree = "<group>"; };
 		C4D7528722355D3900BF4213 /* fsw_lib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = fsw_lib.c; path = ../../fsw_lib.c; sourceTree = "<group>"; };
 		C4D7528822355D3900BF4213 /* tstmain.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tstmain.c; path = ../src/tstmain.c; sourceTree = "<group>"; };
@@ -56,10 +56,11 @@
 				C4D7528822355D3900BF4213 /* tstmain.c */,
 				C4E236C0223557F100665CB9 /* Products */,
 			);
-			indentWidth = 2;
+			indentWidth = 4;
 			sourceTree = "<group>";
-			tabWidth = 2;
-			usesTabs = 0;
+			tabWidth = 4;
+			usesTabs = 1;
+			wrapsLines = 0;
 		};
 		C4E236C0223557F100665CB9 /* Products */ = {
 			isa = PBXGroup;
