@@ -83,7 +83,7 @@ id2path(struct fsw_posix_volume *pvol, char *idnum)
 
     path = NULL;
     dnid = (fsw_u32) atol(idnum);
-    status = fsw_dnode_id_fullpath(pvol->vol, dnid, FSW_STRING_TYPE_UTF8, &path);
+    status = fsw_dnode_id_fullpath(pvol->vol, dnid, FSW_STRING_TYPE_ISO88591, &path);
 
     if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_dnode_id_fullpath(%u) returned %d.\n", dnid, status);
@@ -93,32 +93,36 @@ id2path(struct fsw_posix_volume *pvol, char *idnum)
 void
 viewdir(struct fsw_posix_volume *pvol, char *path, int level, int rflag, int docat)
 {
-    struct fsw_posix_dir *dir;
-    struct dirent *dent;
-    int i;
-    char subpath[4096];
-
-    dir = fsw_posix_opendir(pvol, path);
-    if (dir == NULL) {
-        fprintf(stderr, "opendir(%s) call failed.\n", path);
-        return;
-    }
-    while ((dent = fsw_posix_readdir(dir)) != NULL) {
-        if (outfile != NULL) {
-            for (i = 0; i < level*2; i++)
-                fputc(' ', outfile);
-          fprintf(outfile, "0x%04x %8d (#%u)%s\n", dent->d_type, dent->d_reclen, (unsigned int)(dent->d_fileno), dent->d_name);
-        }
-
-        if (rflag && dent->d_type == DT_DIR) {
-            snprintf(subpath, sizeof(subpath) - 1, "%s%s/", path, dent->d_name);
-            viewdir(pvol, subpath, level + 1, rflag, docat);
-        } else if (docat && dent->d_type == DT_REG) {
-            snprintf(subpath, sizeof(subpath) - 1, "%s%s", path, dent->d_name);
-            catfile(pvol, subpath);
-        }
-    }
-    fsw_posix_closedir(dir);
+	struct fsw_posix_dir *dir;
+	struct dirent *dent;
+	int i;
+	char subpath[4096];
+	
+	dir = fsw_posix_opendir(pvol, path);
+	if (dir == NULL) {
+		fprintf(stderr, "opendir(%s) call failed.\n", path);
+		return;
+	}
+	while ((dent = fsw_posix_readdir(dir)) != NULL) {
+		if (outfile != NULL) {
+			for (i = 0; i < level*2; i++)
+				fputc(' ', outfile);
+			fprintf(outfile, "0x%04x %8d (#%u)", dent->d_type, dent->d_reclen, (unsigned int)(dent->d_fileno));
+#if 1
+			fprintf(outfile, "%*s", dent->d_reclen, dent->d_name);
+#endif
+			fputc('\n', outfile);
+		}
+		
+		if (rflag && dent->d_type == DT_DIR) {
+			snprintf(subpath, sizeof(subpath) - 1, "%s%s/", path, dent->d_name);
+			viewdir(pvol, subpath, level + 1, rflag, docat);
+		} else if (docat && dent->d_type == DT_REG) {
+			snprintf(subpath, sizeof(subpath) - 1, "%s%s", path, dent->d_name);
+			catfile(pvol, subpath);
+		}
+	}
+	fsw_posix_closedir(dir);
 }
 
 void
@@ -165,9 +169,7 @@ main(int argc, char *argv[])
   fst = fstypes[0];
   pvol = fsw_posix_mount(argv[1], fst);
   
-  if (pvol != NULL) {
-    fprintf(stdout, "Mounted as '%s'.\n", (char *)pvol->vol->label.data);
-  } else {
+  if (pvol == NULL) {
     fprintf(stderr, "Mounting failed.\n");
     return 1;
   }
