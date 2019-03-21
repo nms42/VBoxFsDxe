@@ -557,13 +557,16 @@ void fsw_string_list_free(struct fsw_string_list *lst)
 	}
 }
 
-struct fsw_string_list* fsw_string_list_prepend(struct fsw_string_list *lst, struct fsw_string *str)
+struct fsw_string_list* fsw_string_list_prepend(struct fsw_string_list* lst, struct fsw_string* str)
 {
-	struct fsw_string_list *fresh;
+	fsw_status_t status;
+	struct fsw_string_list* fresh = NULL;
 
-	(void) fsw_alloc(sizeof (*fresh), &fresh);	// XXX: ignore failures?
-	fresh->str = str;
-	fresh->flink = lst;
+	status = fsw_alloc(sizeof(*fresh), &fresh);
+	if (status == FSW_SUCCESS) {
+		fresh->str = str;
+		fresh->flink = lst;
+	}
 	return fresh;
 }
 
