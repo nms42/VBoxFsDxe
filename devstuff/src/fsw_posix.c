@@ -79,7 +79,7 @@ struct fsw_posix_volume * fsw_posix_mount(const char *path, struct fsw_fstype_ta
 
     // allocate volume structure
     status = fsw_alloc_zero(sizeof(struct fsw_posix_volume), (void **)&pvol);
-    if (status)
+    if (status != FSW_SUCCESS)
         return NULL;
 
     // open underlying file/device
@@ -94,7 +94,7 @@ struct fsw_posix_volume * fsw_posix_mount(const char *path, struct fsw_fstype_ta
     if (fstype_table == NULL)
         fstype_table = &FSW_FSTYPE_TABLE_NAME(FSTYPE);
     status = fsw_mount(pvol, &fsw_posix_host_table, fstype_table, &pvol->vol);
-    if (status) {
+    if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_mount: fsw_mount returned %d\n", status);
         fsw_free(pvol);
         return NULL;
@@ -128,13 +128,13 @@ struct fsw_posix_file * fsw_posix_open(struct fsw_posix_volume *pvol, const char
 
     // allocate file structure
     status = fsw_alloc(sizeof(struct fsw_posix_file), &file);
-    if (status)
+    if (status != FSW_SUCCESS)
         return NULL;
     file->pvol = pvol;
 
     // open the file
     status = fsw_posix_open_dno(pvol, path, FSW_DNODE_TYPE_FILE, &file->shand);
-    if (status) {
+    if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_open: open_dno returned %d\n", status);
         fsw_free(file);
         return NULL;
@@ -154,7 +154,7 @@ ssize_t fsw_posix_read(struct fsw_posix_file *file, void *buf, size_t nbytes)
 
     buffer_size = (fsw_u32)nbytes;
     status = fsw_shandle_read(&file->shand, &buffer_size, buf);
-    if (status)
+    if (status != FSW_SUCCESS)
         return -1;
     return buffer_size;
 }
@@ -205,13 +205,13 @@ struct fsw_posix_dir * fsw_posix_opendir(struct fsw_posix_volume *pvol, const ch
 
     // allocate file structure
     status = fsw_alloc(sizeof(struct fsw_posix_dir), &dir);
-    if (status)
+    if (status != FSW_SUCCESS)
         return NULL;
     dir->pvol = pvol;
 
     // open the directory
     status = fsw_posix_open_dno(pvol, path, FSW_DNODE_TYPE_DIR, &dir->shand);
-    if (status) {
+    if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_opendir: open_dno returned %d\n", status);
         fsw_free(dir);
         return NULL;
@@ -226,22 +226,23 @@ struct fsw_posix_dir * fsw_posix_opendir(struct fsw_posix_volume *pvol, const ch
 
 struct dirent * fsw_posix_readdir(struct fsw_posix_dir *dir)
 {
-  fsw_status_t        status;
-  struct fsw_dnode    *dno;
-  static struct dirent dent;
-  
-  // get next entry from file system
-  status = fsw_dnode_dir_read(&dir->shand, &dno);
-  if (status != FSW_SUCCESS) {
-    fprintf(stderr, "fsw_posix_readdir: fsw_dnode_dir_read returned %d\n", status);
-    return NULL;
-  }
-  status = fsw_dnode_fill(dno);
-  if (status) {
-    fprintf(stderr, "fsw_posix_readdir: fsw_dnode_fill returned %d\n", status);
-    fsw_dnode_release(dno);
-    return NULL;
-  }
+	fsw_status_t        status;
+	struct fsw_dnode    *dno;
+	static struct dirent dent;
+	
+	// get next entry from file system
+	status = fsw_dnode_dir_read(&dir->shand, &dno);
+	if (status != FSW_SUCCESS) {
+		if (status != FSW_NOT_FOUND)
+			fprintf(stderr, "fsw_posix_readdir: fsw_dnode_dir_read returned %d\n", status);
+		return NULL;
+	}
+	status = fsw_dnode_fill(dno);
+	if (status != FSW_SUCCESS) {
+		fprintf(stderr, "fsw_posix_readdir: fsw_dnode_fill returned %d\n", status);
+		fsw_dnode_release(dno);
+		return NULL;
+	}
   
   // fill dirent structure
   dent.d_fileno = dno->dnode_id;
@@ -261,7 +262,7 @@ struct dirent * fsw_posix_readdir(struct fsw_posix_dir *dir)
       break;
   }
 #if 1
-  dent.d_namlen = dno->name.size;
+  dent.d_namlen = dno->name.len;
 #endif
   memcpy(dent.d_name, dno->name.data, dno->name.size);
   dent.d_name[dno->name.size] = 0;
@@ -307,7 +308,7 @@ fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path,
 
     // resolve the path (symlinks along the way are automatically resolved)
     status = fsw_dnode_lookup_path(pvol->vol->root, &lookup_path, '/', &dno);
-    if (status) {
+    if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_open_dno: fsw_dnode_lookup_path returned %d\n", status);
         return status;
     }
@@ -315,7 +316,7 @@ fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path,
     // if the final node is a symlink, also resolve it
     status = fsw_dnode_resolve(dno, &target_dno);
     fsw_dnode_release(dno);
-    if (status) {
+    if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_open_dno: fsw_dnode_resolve returned %d\n", status);
         return status;
     }
@@ -323,7 +324,7 @@ fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path,
 
     // check that it is a regular file
     status = fsw_dnode_fill(dno);
-    if (status) {
+    if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_open_dno: fsw_dnode_fill returned %d\n", status);
         fsw_dnode_release(dno);
         return status;
@@ -336,7 +337,7 @@ fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path,
 
     // open shandle
     status = fsw_shandle_open(dno, shand);
-    if (status) {
+    if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_open_dno: fsw_shandle_open returned %d\n", status);
     }
     fsw_dnode_release(dno);
