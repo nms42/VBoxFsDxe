@@ -854,19 +854,20 @@ fsw_status_t fsw_dnode_readlink_data(struct fsw_dnode *dno, struct fsw_string *l
         return FSW_VOLUME_CORRUPTED;
 
     // open shandle and read the data
+    fsw_memzero(&shand, sizeof(shand));
     status = fsw_shandle_open(dno, &shand);
-    if (status != FSW_SUCCESS)
-        return status;
-    buffer_size = sizeof(buffer);
-    status = fsw_shandle_read(&shand, &buffer_size, buffer);
-    fsw_shandle_close(&shand);
-    if (status != FSW_SUCCESS)
-        return status;
 
-    // TODO: link datum type?
-    fsw_string_setter(&s, FSW_STRING_TYPE_ISO88591, buffer_size, buffer_size, buffer);
+    if (status == FSW_SUCCESS) {
+	    buffer_size = sizeof(buffer);
+	    status = fsw_shandle_read(&shand, &buffer_size, buffer);
+	    fsw_shandle_close(&shand);
 
-    status = fsw_strdup_coerce(link_target, dno->vol->host_string_type, &s);
+	    if (status == FSW_SUCCESS) {
+		    // TODO: link datum type?
+		    fsw_string_setter(&s, FSW_STRING_TYPE_ISO88591, buffer_size, buffer_size, buffer);
+		    status = fsw_strdup_coerce(link_target, dno->vol->host_string_type, &s);
+	    }
+    }
     return status;
 }
 
@@ -948,17 +949,17 @@ fsw_status_t fsw_shandle_open(struct fsw_dnode *dno, struct fsw_shandle *shand)
 
     // read full dnode information into memory
     status = vol->fstype_table->dnode_fill(vol, dno);
-    if (status != FSW_SUCCESS)
-        return status;
 
-    // setup shandle
-    fsw_dnode_retain(dno);
+    if (status == FSW_SUCCESS) {
+	// setup shandle
+	fsw_dnode_retain(dno);
 
-    shand->dnode = dno;
-    shand->pos = 0;
-    shand->extent.type = FSW_EXTENT_TYPE_INVALID;
+	shand->dnode = dno;
+	shand->pos = 0;
+	shand->extent.type = FSW_EXTENT_TYPE_INVALID;
+    }
 
-    return FSW_SUCCESS;
+    return status;
 }
 
 /**

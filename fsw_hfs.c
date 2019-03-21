@@ -1237,22 +1237,19 @@ fsw_hfs_dir_read (
   status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) & catkey,
                           vol-> case_sensitive ? fsw_hfs_cmp_catkey :
                           fsw_hfs_cmpi_catkey, &node, &ptr);
-  if (status != FSW_SUCCESS)
-    goto done;
 
-  /* Iterator updates shand state */
-  param.vol = vol;
-  param.shandle = shand;
-  param.parent = dno->g.dnode_id;
-  param.cur_pos = 0;
-  status = fsw_hfs_btree_iterate_node (&vol->catalog_tree, node, ptr,
-                                fsw_hfs_btree_visit_node, &param);
-  if (status != FSW_SUCCESS)
-    goto done;
+  if (status == FSW_SUCCESS) {
+	/* Iterator updates shand state */
+	param.vol = vol;
+	param.shandle = shand;
+	param.parent = dno->g.dnode_id;
+	param.cur_pos = 0;
+	status = fsw_hfs_btree_iterate_node (&vol->catalog_tree, node, ptr,
+				fsw_hfs_btree_visit_node, &param);
 
-  status = create_hfs_dnode (dno, &param.file_info, child_dno_out);
-
-done:
+	if (status == FSW_SUCCESS)
+		status = create_hfs_dnode (dno, &param.file_info, child_dno_out);
+	}
   fsw_free (node);
   fsw_strfree (&rec_name);
 

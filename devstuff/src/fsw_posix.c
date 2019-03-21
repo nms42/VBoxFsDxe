@@ -127,7 +127,7 @@ struct fsw_posix_file * fsw_posix_open(struct fsw_posix_volume *pvol, const char
     // TODO: check flags for unwanted values
 
     // allocate file structure
-    status = fsw_alloc(sizeof(struct fsw_posix_file), &file);
+    status = fsw_alloc_zero(sizeof(struct fsw_posix_file), (void **)&file);
     if (status != FSW_SUCCESS)
         return NULL;
     file->pvol = pvol;
