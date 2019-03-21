@@ -286,22 +286,22 @@ fsw_hfs_volume_mount (
 
     /* Setup catalog dnode */
     status =
-      fsw_dnode_create_root (vol, kHFSCatalogFileID, &vol->catalog_tree.file);
+      fsw_dnode_create_root (vol, kHFSCatalogFileID, &vol->catalog_tree.btfile);
     CHECK (status != FSW_SUCCESS);
-    fsw_memcpy (vol->catalog_tree.file->extents,
+    fsw_memcpy (vol->catalog_tree.btfile->extents,
                 vol->primary_voldesc->catalogFile.extents,
-                sizeof vol->catalog_tree.file->extents);
-    vol->catalog_tree.file->g.size =
+                sizeof vol->catalog_tree.btfile->extents);
+    vol->catalog_tree.btfile->g.size =
       be64_to_cpu (vol->primary_voldesc->catalogFile.logicalSize);
 
     /* Setup extents overflow file */
     status =
-      fsw_dnode_create_root (vol, kHFSExtentsFileID, &vol->extents_tree.file);
+      fsw_dnode_create_root (vol, kHFSExtentsFileID, &vol->extents_tree.btfile);
     CHECK (status != FSW_SUCCESS);
-    fsw_memcpy (vol->extents_tree.file->extents,
+    fsw_memcpy (vol->extents_tree.btfile->extents,
                 vol->primary_voldesc->extentsFile.extents,
-                sizeof vol->extents_tree.file->extents);
-    vol->extents_tree.file->g.size =
+                sizeof vol->extents_tree.btfile->extents);
+    vol->extents_tree.btfile->g.size =
       be64_to_cpu (vol->primary_voldesc->extentsFile.logicalSize);
 
     /* Setup the root dnode */
@@ -313,7 +313,7 @@ fsw_hfs_volume_mount (
      * the node descriptor.
      */
     r =
-      fsw_hfs_read_file (vol->catalog_tree.file, sizeof (BTNodeDescriptor),
+      fsw_hfs_read_file (vol->catalog_tree.btfile, sizeof (BTNodeDescriptor),
                          sizeof (BTHeaderRec), (fsw_u8 *) & tree_header);
     if (r != sizeof (BTHeaderRec)) {
       rv = FSW_VOLUME_CORRUPTED;
@@ -321,8 +321,8 @@ fsw_hfs_volume_mount (
     }
     vol->case_sensitive = (signature == kHFSXSigWord) &&
       (tree_header.keyCompareType == kHFSBinaryCompare);
-    vol->catalog_tree.root_node = be32_to_cpu (tree_header.rootNode);
-    vol->catalog_tree.node_size = be16_to_cpu (tree_header.nodeSize);
+    vol->catalog_tree.btroot_node = be32_to_cpu (tree_header.rootNode);
+    vol->catalog_tree.btnode_size = be16_to_cpu (tree_header.nodeSize);
 
     /* Take volume Name before tree_header overwritten */
     {
@@ -331,10 +331,10 @@ fsw_hfs_volume_mount (
       fsw_u8 cbuff[sizeof (BTNodeDescriptor) + sizeof (HFSPlusCatalogKey)];
 
       firstLeafNum = be32_to_cpu (tree_header.firstLeafNode);
-      catfOffset = (fsw_u64)vol->catalog_tree.node_size * firstLeafNum;
+      catfOffset = (fsw_u64)vol->catalog_tree.btnode_size * firstLeafNum;
 
       r =
-        fsw_hfs_read_file (vol->catalog_tree.file, catfOffset, sizeof (cbuff),
+        fsw_hfs_read_file (vol->catalog_tree.btfile, catfOffset, sizeof (cbuff),
                            cbuff);
 
       if (r == sizeof (cbuff)) {
@@ -359,15 +359,15 @@ fsw_hfs_volume_mount (
 
     /* Read extents overflow file */
     r =
-      fsw_hfs_read_file (vol->extents_tree.file, sizeof (BTNodeDescriptor),
+      fsw_hfs_read_file (vol->extents_tree.btfile, sizeof (BTNodeDescriptor),
                          sizeof (BTHeaderRec), (fsw_u8 *) & tree_header);
     if (r != sizeof (BTHeaderRec)) {
       rv = FSW_VOLUME_CORRUPTED;
       break;
     }
 
-    vol->extents_tree.root_node = be32_to_cpu (tree_header.rootNode);
-    vol->extents_tree.node_size = be16_to_cpu (tree_header.nodeSize);
+    vol->extents_tree.btroot_node = be32_to_cpu (tree_header.rootNode);
+    vol->extents_tree.btnode_size = be16_to_cpu (tree_header.nodeSize);
 
     rv = FSW_SUCCESS;
   } while (0);
@@ -395,13 +395,13 @@ fsw_hfs_volume_free (
     fsw_free (vol->primary_voldesc);
     vol->primary_voldesc = NULL;
   }
-  if (vol->catalog_tree.file) {
-    fsw_dnode_release ((struct fsw_dnode *) (vol->catalog_tree.file));
-    vol->catalog_tree.file = NULL;
+  if (vol->catalog_tree.btfile != NULL) {
+    fsw_dnode_release ((struct fsw_dnode *) (vol->catalog_tree.btfile));
+    vol->catalog_tree.btfile = NULL;
   }
-  if (vol->extents_tree.file) {
-    fsw_dnode_release ((struct fsw_dnode *) (vol->extents_tree.file));
-    vol->extents_tree.file = NULL;
+  if (vol->extents_tree.btfile != NULL) {
+    fsw_dnode_release ((struct fsw_dnode *) (vol->extents_tree.btfile));
+    vol->extents_tree.btfile = NULL;
   }
 }
 
@@ -521,65 +521,72 @@ fsw_hfs_find_block (
 /* Find record offset, numbering starts from the end */
 static fsw_u32
 fsw_hfs_btree_recoffset (
-  struct fsw_hfs_btree *btree,
-  BTNodeDescriptor * node,
-  fsw_u32 index
-)
+						 struct fsw_hfs_btree *btree,
+						 BTNodeDescriptor * node,
+						 fsw_u32 recnum
+						 )
 {
-  fsw_u8 *cnode = (fsw_u8 *) node;
-  fsw_u16 *recptr;
-
-  recptr = (fsw_u16 *) (cnode + btree->node_size - index * 2 - 2);
-  return be16_to_cpu (*recptr);
+	fsw_u8 *cnode = (fsw_u8 *) node;
+	fsw_u16 *recptr;
+	fsw_u32 recoff;
+	fsw_u16 u16raw;
+	
+	recoff = btree->btnode_size - recnum * 2 - 2;
+	recptr = (fsw_u16 *)(cnode + recoff);
+	u16raw = (fsw_u16)(*recptr);
+	return be16_to_cpu (u16raw);
 }
 
 /* Pointer to the key inside node */
 static BTreeKey *
 fsw_hfs_btree_rec (
-  struct fsw_hfs_btree *btree,
-  BTNodeDescriptor * node,
-  fsw_u32 index
-)
+				   struct fsw_hfs_btree *btree,
+				   BTNodeDescriptor * node,
+				   fsw_u32 recnum
+				   )
 {
-  fsw_u8 *cnode = (fsw_u8 *) node;
-  fsw_u32 offset;
-
-  offset = fsw_hfs_btree_recoffset (btree, node, index);
-  if (offset < sizeof(BTNodeDescriptor) || offset > btree->node_size) {
-    return NULL;
-  }
-  return (BTreeKey *) (cnode + offset);
+	fsw_u8 *cnode = (fsw_u8 *) node;
+	fsw_u32 offset;
+	
+	offset = fsw_hfs_btree_recoffset (btree, node, recnum);
+	if (offset < sizeof(BTNodeDescriptor) || offset > btree->btnode_size) {
+		return NULL;
+	}
+	return (BTreeKey *) (cnode + offset);
 }
 
 static fsw_u32
 fsw_hfs_btree_next_node_num (
-  BTreeKey *currkey
-)
+							 BTreeKey *currkey
+							 )
 {
-        fsw_u32 *pointer;
-
-        pointer = (fsw_u32 *) ((char *) currkey + be16_to_cpu (currkey->length16) + 2);
-        return be32_to_cpu (*pointer);
+	fsw_u32 *pointer;
+	
+	pointer = (fsw_u32 *) ((char *) currkey + be16_to_cpu (currkey->length16) + 2);
+	return be32_to_cpu (*pointer);
 }
 
 static fsw_status_t
 fsw_hfs_btree_read_node (
-  struct fsw_hfs_btree *btree,
-  fsw_u32 nodenum,
-  fsw_u8* buffer
-)
+						 struct fsw_hfs_btree *btree,
+						 fsw_u32 nodenum,
+						 fsw_u8* buffer
+						 )
 {
-  if ((fsw_u32) fsw_hfs_read_file
-      (btree->file, (fsw_u64) nodenum * btree->node_size, btree->node_size,
-       buffer) != btree->node_size) {
-    return FSW_VOLUME_CORRUPTED;
-  }
-
-  if (be16_to_cpu (*(fsw_u16 *) (buffer + btree->node_size - 2)) != sizeof (BTNodeDescriptor)) {
-    return FSW_VOLUME_CORRUPTED;
-  }
-
-  return FSW_SUCCESS;
+	fsw_u32 offset;
+	
+	if ((fsw_u32) fsw_hfs_read_file
+		(btree->btfile, (fsw_u64) nodenum * btree->btnode_size, btree->btnode_size,
+		 buffer) != btree->btnode_size) {
+			return FSW_VOLUME_CORRUPTED;
+		}
+	
+	offset = fsw_hfs_btree_recoffset(btree, (BTNodeDescriptor *)buffer, 0);
+	if (offset != sizeof (BTNodeDescriptor)) {
+		return FSW_VOLUME_CORRUPTED;
+	}
+	
+	return FSW_SUCCESS;
 }
 
 static fsw_status_t
@@ -598,8 +605,8 @@ fsw_hfs_btree_search (
   fsw_u32 currnode;
   fsw_u32 recnum;
 
-  currnode = btree->root_node;
-  status = fsw_alloc (btree->node_size, &buffer);
+  currnode = btree->btroot_node;
+  status = fsw_alloc (btree->btnode_size, &buffer);
   if (status != FSW_SUCCESS)
     return status;
   node = (BTNodeDescriptor *) buffer;
@@ -845,7 +852,7 @@ fsw_hfs_btree_iterate_node (
   BTNodeDescriptor *node = first_node;
   fsw_u8 *buffer = NULL;
 
-  status = fsw_alloc (btree->node_size, &buffer);
+  status = fsw_alloc (btree->btnode_size, &buffer);
   if (status != FSW_SUCCESS)
     return status;
 
@@ -1172,11 +1179,9 @@ fsw_hfs_dir_lookup (
 
   catkey.keyLength = (fsw_u16) (6 + rec_name.size);
 
-  status =
-    fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) & catkey,
-                          vol->
-                          case_sensitive ? fsw_hfs_cmp_catkey :
-                          fsw_hfs_cmpi_catkey, &node, &ptr);
+  status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) & catkey,
+                          vol->case_sensitive ? fsw_hfs_cmp_catkey :fsw_hfs_cmpi_catkey,
+						  &node, &ptr);
   if (status != FSW_SUCCESS)
     goto done;
 

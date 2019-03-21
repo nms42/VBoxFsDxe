@@ -134,9 +134,9 @@ struct fsw_hfs_dnode
  */
 struct fsw_hfs_btree
 {
-    fsw_u32                  root_node;
-    fsw_u32                  node_size;
-    struct fsw_hfs_dnode*    file;
+    fsw_u32                  btroot_node;
+    fsw_u32                  btnode_size;
+    struct fsw_hfs_dnode*    btfile;
 };
 
 
