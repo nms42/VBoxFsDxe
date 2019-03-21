@@ -73,7 +73,7 @@ typedef uint64_t      fsw_u64;
 // allocation functions
 
 #define fsw_alloc(size, ptrptr) (((*(ptrptr) = malloc(size)) == NULL) ? FSW_OUT_OF_MEMORY : FSW_SUCCESS)
-#define fsw_free(ptr) free(ptr)
+#define fsw_free(ptr) if (ptr != NULL) free(ptr)
 
 // memory functions
 
