@@ -155,7 +155,7 @@ static fsw_status_t fsw_strcoerce_UTF8_ISO88591(void *srcdata, int srclen, struc
     
     fsw_string_setter(dest, FSW_STRING_TYPE_ISO88591, srclen, srclen * sizeof(fsw_u8), NULL);
     status = fsw_alloc(dest->size, &dest->data);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
     
     sp = (fsw_u8 *)srcdata;
@@ -187,7 +187,7 @@ static fsw_status_t fsw_strcoerce_UTF16_ISO88591(void *srcdata, int srclen, stru
     
     fsw_string_setter(dest, FSW_STRING_TYPE_ISO88591, srclen, srclen * sizeof(fsw_u8), NULL);
     status = fsw_alloc(dest->size, &dest->data);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
     
     sp = (fsw_u16 *)srcdata;
@@ -209,7 +209,7 @@ static fsw_status_t fsw_strcoerce_UTF16_SWAPPED_ISO88591(void *srcdata, int srcl
     
     fsw_string_setter(dest, FSW_STRING_TYPE_ISO88591, srclen, srclen * sizeof(fsw_u8), NULL);
     status = fsw_alloc(dest->size, &dest->data);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
     
     sp = (fsw_u16 *)srcdata;
@@ -231,7 +231,7 @@ static fsw_status_t fsw_strcoerce_ISO88591_UTF16(void *srcdata, int srclen, stru
     
     fsw_string_setter(dest, FSW_STRING_TYPE_UTF16, srclen, srclen * sizeof(fsw_u16), NULL);
     status = fsw_alloc(dest->size, &dest->data);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
     
     sp = (fsw_u8 *)srcdata;
@@ -253,7 +253,7 @@ static fsw_status_t fsw_strcoerce_UTF8_UTF16(void *srcdata, int srclen, struct f
     
     fsw_string_setter(dest, FSW_STRING_TYPE_UTF16, srclen, srclen * sizeof(fsw_u16), NULL);
     status = fsw_alloc(dest->size, &dest->data);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
     
     sp = (fsw_u8 *)srcdata;
@@ -285,7 +285,7 @@ static fsw_status_t fsw_strcoerce_UTF16_SWAPPED_UTF16(void *srcdata, int srclen,
     
     fsw_string_setter(dest, FSW_STRING_TYPE_UTF16, srclen, srclen * sizeof(fsw_u16), NULL);
     status = fsw_alloc(dest->size, &dest->data);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
     
     sp = (fsw_u16 *)srcdata;
@@ -324,7 +324,7 @@ static fsw_status_t fsw_strcoerce_ISO88591_UTF8(void *srcdata, int srclen, struc
     if (destsize < 1)
         return FSW_SUCCESS;
     status = fsw_alloc(dest->size, &dest->data);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
     
     sp = (fsw_u8 *)srcdata;
@@ -378,7 +378,7 @@ static fsw_status_t fsw_strcoerce_UTF16_UTF8(void *srcdata, int srclen, struct f
     if (destsize < 1)
         return FSW_SUCCESS;
     status = fsw_alloc(dest->size, &dest->data);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
     
     sp = (fsw_u16 *)srcdata;
@@ -432,7 +432,7 @@ static fsw_status_t fsw_strcoerce_UTF16_SWAPPED_UTF8(void *srcdata, int srclen, 
     if (destsize < 1)
         return FSW_SUCCESS;
     status = fsw_alloc(dest->size, &dest->data);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
     
     sp = (fsw_u16 *)srcdata;

@@ -64,7 +64,7 @@ fsw_status_t fsw_alloc_zero(int len, void **ptr_out)
     fsw_status_t status;
 
     status = fsw_alloc(len, ptr_out);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
     fsw_memzero(*ptr_out, len);
     return FSW_SUCCESS;
@@ -79,7 +79,7 @@ fsw_status_t fsw_memdup(void **dest_out, void *src, int len)
     fsw_status_t status;
 
     status = fsw_alloc(len, dest_out);
-    if (status)
+    if (status != FSW_SUCCESS)
         return status;
     fsw_memcpy(*dest_out, src, len);
     return FSW_SUCCESS;
@@ -433,7 +433,7 @@ fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, int type, struct fsw_str
     if (src->type == type) {
         fsw_string_setter(dest, type, src->len, src->size, NULL);
         status = fsw_alloc(dest->size, &dest->data);
-        if (status)
+        if (status != FSW_SUCCESS)
             return status;
 
         fsw_memcpy(dest->data, src->data, dest->size);

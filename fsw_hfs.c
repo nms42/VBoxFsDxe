@@ -131,12 +131,12 @@ fsw_hfs_read_block (
 
   extent.log_start = log_bno;
   status = fsw_hfs_get_extent (dno->g.vol, dno, &extent);
-  if (status)
+  if (status != FSW_SUCCESS)
     return status;
 
   phys_bno = extent.phys_start;
   status = fsw_block_get (dno->g.vol, phys_bno, 0, (void **) &buffer);
-  if (status)
+  if (status != FSW_SUCCESS)
     return status;
 
   fsw_memcpy (buf, buffer + off, len);
@@ -171,7 +171,7 @@ fsw_hfs_read_file (
     if (next_len >= 0 && (fsw_u32) next_len > block_size)
       next_len = block_size;
     status = fsw_hfs_read_block (dno, log_bno, off, next_len, buf);
-    if (status)
+    if (status != FSW_SUCCESS)
       return -1;
     buf += next_len;
     pos += next_len;
@@ -219,7 +219,7 @@ fsw_hfs_volume_mount (
   blockno = HFS_SUPERBLOCK_BLOCKNO;
 
 #define CHECK(s)         \
-        if (status)  {   \
+        if (status != FSW_SUCCESS)  {   \
             rv = status; \
             break;       \
         }
@@ -233,7 +233,7 @@ fsw_hfs_volume_mount (
     fsw_u32 block_size;
 
     status = fsw_block_get (vol, blockno, 0, &buffer);
-    CHECK (status);
+    CHECK (status != FSW_SUCCESS);
     voldesc = (HFSPlusVolumeHeader *) buffer;
     signature = be16_to_cpu (voldesc->signature);
 
@@ -271,7 +271,7 @@ fsw_hfs_volume_mount (
 
     status =
       fsw_memdup ((void **) &vol->primary_voldesc, voldesc, sizeof (*voldesc));
-    CHECK (status);
+    CHECK (status != FSW_SUCCESS);
 
     block_size = be32_to_cpu (voldesc->blockSize);
     vol->block_size_shift = fsw_hfs_compute_shift (block_size);
@@ -287,7 +287,7 @@ fsw_hfs_volume_mount (
     /* Setup catalog dnode */
     status =
       fsw_dnode_create_root (vol, kHFSCatalogFileID, &vol->catalog_tree.file);
-    CHECK (status);
+    CHECK (status != FSW_SUCCESS);
     fsw_memcpy (vol->catalog_tree.file->extents,
                 vol->primary_voldesc->catalogFile.extents,
                 sizeof vol->catalog_tree.file->extents);
@@ -297,7 +297,7 @@ fsw_hfs_volume_mount (
     /* Setup extents overflow file */
     status =
       fsw_dnode_create_root (vol, kHFSExtentsFileID, &vol->extents_tree.file);
-    CHECK (status);
+    CHECK (status != FSW_SUCCESS);
     fsw_memcpy (vol->extents_tree.file->extents,
                 vol->primary_voldesc->extentsFile.extents,
                 sizeof vol->extents_tree.file->extents);
@@ -306,7 +306,7 @@ fsw_hfs_volume_mount (
 
     /* Setup the root dnode */
     status = fsw_dnode_create_root (vol, kHFSRootFolderID, &vol->g.root);
-    CHECK (status);
+    CHECK (status != FSW_SUCCESS);
 
     /*
      * Read catalog file, we know that first record is in the first node, right after
@@ -352,7 +352,7 @@ fsw_hfs_volume_mount (
           fsw_strfree (&vol->g.label);
           status =
             fsw_strdup_coerce (&vol->g.label, vol->g.host_string_type, &vn);
-          CHECK (status);
+          CHECK (status != FSW_SUCCESS);
         }
       }
     }
@@ -600,7 +600,7 @@ fsw_hfs_btree_search (
 
   currnode = btree->root_node;
   status = fsw_alloc (btree->node_size, &buffer);
-  if (status)
+  if (status != FSW_SUCCESS)
     return status;
   node = (BTNodeDescriptor *) buffer;
 
@@ -846,7 +846,7 @@ fsw_hfs_btree_iterate_node (
   fsw_u8 *buffer = NULL;
 
   status = fsw_alloc (btree->node_size, &buffer);
-  if (status)
+  if (status != FSW_SUCCESS)
     return status;
 
   for (;;) {
@@ -1074,7 +1074,7 @@ fsw_hfs_get_extent (
     status =
       fsw_hfs_btree_search (&vol->extents_tree, (BTreeKey *) & overflowkey,
                             fsw_hfs_cmp_extkey, &node, &ptr);
-    if (status)
+    if (status != FSW_SUCCESS)
       break;
 
     key = (struct HFSPlusExtentKey *)
@@ -1100,7 +1100,7 @@ create_hfs_dnode (
   status =
     fsw_dnode_create (dno->g.vol, dno, file_info->id, file_info->type, file_info->name,
                       &baby);
-  if (status)
+  if (status != FSW_SUCCESS)
     return status;
 
   baby->g.size = file_info->size;
@@ -1164,7 +1164,7 @@ fsw_hfs_dir_lookup (
   else {
     status = fsw_strdup_coerce (&rec_name, FSW_STRING_TYPE_UTF16, lookup_name);
     /* nothing allocated so far */
-    if (status)
+    if (status != FSW_SUCCESS)
       goto done;
     free_data = 1;
     fsw_memcpy (catkey.nodeName.unicode, rec_name.data, rec_name.size);
@@ -1177,7 +1177,7 @@ fsw_hfs_dir_lookup (
                           vol->
                           case_sensitive ? fsw_hfs_cmp_catkey :
                           fsw_hfs_cmpi_catkey, &node, &ptr);
-  if (status)
+  if (status != FSW_SUCCESS)
     goto done;
 
   file_key =
@@ -1186,7 +1186,7 @@ fsw_hfs_dir_lookup (
   fill_fileinfo (vol, file_key, &file_info);
 
   status = create_hfs_dnode (dno, &file_info, child_dno_out);
-  if (status)
+  if (status != FSW_SUCCESS)
     goto done;
 
 done:
@@ -1232,7 +1232,7 @@ fsw_hfs_dir_read (
   status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) & catkey,
                           vol-> case_sensitive ? fsw_hfs_cmp_catkey :
                           fsw_hfs_cmpi_catkey, &node, &ptr);
-  if (status)
+  if (status != FSW_SUCCESS)
     goto done;
 
   /* Iterator updates shand state */
@@ -1242,7 +1242,7 @@ fsw_hfs_dir_read (
   param.cur_pos = 0;
   status = fsw_hfs_btree_iterate_node (&vol->catalog_tree, node, ptr,
                                 fsw_hfs_btree_visit_node, &param);
-  if (status)
+  if (status != FSW_SUCCESS)
     goto done;
 
   status = create_hfs_dnode (dno, &param.file_info, child_dno_out);
