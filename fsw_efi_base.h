@@ -97,4 +97,10 @@ typedef UINT64  fsw_u64;
 #define FSW_U64_SHL(val,shiftbits) LShiftU64((val), (shiftbits))
 #define FSW_U64_DIV(val,divisor) DivU64x32((val), (divisor), NULL)
 
+// byte swapping
+
+#define bswap16(x) SwapBytes16(x)
+#define bswap32(x) SwapBytes32(x)
+#define bswap64(x) SwapBytes64(x)
+
 #endif
