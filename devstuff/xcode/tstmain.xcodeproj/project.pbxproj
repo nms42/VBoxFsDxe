@@ -270,8 +270,7 @@
 					HOST_POSIX,
 					"FSTYPE=hfs",
 					"FSW_DEBUG_LEVEL=3",
-					VBOXHFS_BTREE_BINSEARCH,
-					"FSW_DNODE_CACHE_SIZE=7",
+					"FSW_DNODE_CACHE_SIZE=0",
 					"ITERATIONS=1",
 					"O_BINARY=0",
 				);
