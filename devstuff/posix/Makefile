@@ -10,6 +10,10 @@ SRCS	= ${MAIN} \
 		${VSRC}/fsw_hfs.c
 
 CFLAGS	= \
+	-Dbswap16=__builtin_bswap16 \
+	-Dbswap32=__builtin_bswap32 \
+	-Dbswap64=__builtin_bswap64 \
+	\
 	-DHOST_POSIX \
 	-DFSTYPE=hfs \
 	-DVBOXHFS_BTREE_BINSEARCH \

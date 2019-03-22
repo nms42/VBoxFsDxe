@@ -22,9 +22,9 @@ WFLAGS	= \
 	-Dmode_t=int \
 	-Doff_t=int64 \
 	-Dssize_t=long \
-	-DSwapBytes16=_byteswap_ushort \
-	-DSwapBytes32=_byteswap_ulong \
-	-DSwapBytes64=_byteswap_uint64 \
+	-Dbswap16=_byteswap_ushort \
+	-Dbswap32=_byteswap_ulong \
+	-Dbswap64=_byteswap_uint64 \
 	-D_CRT_SECURE_NO_WARNINGS \
 	-DWIN32 \
 	-D_DEBUG \

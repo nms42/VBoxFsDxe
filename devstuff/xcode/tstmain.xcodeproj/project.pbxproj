@@ -264,6 +264,9 @@
 				DEVELOPMENT_TEAM = "";
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					"bswap16=__builtin_bswap16",
+					"bswap32=__builtin_bswap32",
+					"bswap64=__builtin_bswap64",
 					HOST_POSIX,
 					"FSTYPE=hfs",
 					"FSW_DEBUG_LEVEL=3",

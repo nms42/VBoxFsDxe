@@ -159,74 +159,23 @@ struct fsw_hfs_volume
 };
 
 /* Endianess swappers */
-static inline fsw_u16
-swab16(fsw_u16 x)
-{
-#ifdef HOST_EFI
-    return SwapBytes16 (x);
-#else
-    return x<<8 | x>>8;
-#endif
-}
-
-static inline fsw_u32
-swab32(fsw_u32 x)
-{
-#ifdef HOST_EFI
-    return SwapBytes32 (x);
-#else
-    return x<<24 | x>>24 |
-            (x & (fsw_u32)0x0000ff00UL)<<8 |
-            (x & (fsw_u32)0x00ff0000UL)>>8;
-#endif
-}
-
-
-static inline fsw_u64
-swab64(fsw_u64 x)
-{
-#ifdef HOST_EFI
-    return SwapBytes64 (x);
-#else
-    return x<<56 | x>>56 |
-            (x & (fsw_u64)0x000000000000ff00ULL)<<40 |
-            (x & (fsw_u64)0x0000000000ff0000ULL)<<24 |
-            (x & (fsw_u64)0x00000000ff000000ULL)<< 8 |
-            (x & (fsw_u64)0x000000ff00000000ULL)>> 8 |
-            (x & (fsw_u64)0x0000ff0000000000ULL)>>24 |
-            (x & (fsw_u64)0x00ff000000000000ULL)>>40;
-#endif
-}
 
 static inline fsw_u16
 be16_to_cpu(fsw_u16 x)
 {
-    return swab16(x);
-}
-
-static inline fsw_u16
-cpu_to_be16(fsw_u16 x)
-{
-    return swab16(x);
-}
-
-
-static inline fsw_u32
-cpu_to_be32(fsw_u32 x)
-{
-    return swab32(x);
+    return FSW_SWAPVALUE_U16(x);
 }
 
 static inline fsw_u32
 be32_to_cpu(fsw_u32 x)
 {
-    return swab32(x);
+    return FSW_SWAPVALUE_U32(x);
 }
 
 static inline fsw_u64
 be64_to_cpu(fsw_u64 x)
 {
-    return swab64(x);
+    return FSW_SWAPVALUE_U64(x);
 }
 
 #endif

@@ -56,7 +56,6 @@
 
 #include "fsw_base.h"
 
-
 /** Maximum size for a path, specifically symlink target paths. */
 #ifndef VBOX
 #define FSW_PATH_MAX (4096)
@@ -73,11 +72,13 @@
 /** Indicates that the block cache entry is empty. */
 #define FSW_INVALID_BNO (~0U)
 
-
 //
 // Byte-swapping macros
 //
 
+#if !defined(FSW_BIG_ENDIAN) && !defined(FSW_LITTLE_ENDIAN)
+#error Neither FSW_BIG_ENDIAN nor FSW_LITTLE_ENDIAN are defined
+#endif
 
 /**
  * \name Byte Order Macros
@@ -92,58 +93,11 @@ typedef fsw_u32             fsw_u32_be;
 typedef fsw_u64             fsw_u64_le;
 typedef fsw_u64             fsw_u64_be;
 
-#define FSW_SWAPVALUE_U16(v) ((((fsw_u16)(v) & 0xff00) >> 8) | \
-                              (((fsw_u16)(v) & 0x00ff) << 8))
-#define FSW_SWAPVALUE_U32(v) ((((fsw_u32)(v) & 0xff000000UL) >> 24) | \
-                              (((fsw_u32)(v) & 0x00ff0000UL) >> 8)  | \
-                              (((fsw_u32)(v) & 0x0000ff00UL) << 8)  | \
-                              (((fsw_u32)(v) & 0x000000ffUL) << 24))
-#define FSW_SWAPVALUE_U64(v) ((((fsw_u64)(v) & 0xff00000000000000ULL) >> 56) | \
-                              (((fsw_u64)(v) & 0x00ff000000000000ULL) >> 40) | \
-                              (((fsw_u64)(v) & 0x0000ff0000000000ULL) >> 24) | \
-                              (((fsw_u64)(v) & 0x000000ff00000000ULL) >> 8)  | \
-                              (((fsw_u64)(v) & 0x00000000ff000000ULL) << 8)  | \
-                              (((fsw_u64)(v) & 0x0000000000ff0000ULL) << 24) | \
-                              (((fsw_u64)(v) & 0x000000000000ff00ULL) << 40) | \
-                              (((fsw_u64)(v) & 0x00000000000000ffULL) << 56))
+#define FSW_SWAPVALUE_U16(v) bswap16(v)
 
-#ifdef FSW_LITTLE_ENDIAN
+#define FSW_SWAPVALUE_U32(v) bswap32(v)
 
-#define fsw_u16_le_swap(v) (v)
-#define fsw_u16_be_swap(v) FSW_SWAPVALUE_U16(v)
-#define fsw_u32_le_swap(v) (v)
-#define fsw_u32_be_swap(v) FSW_SWAPVALUE_U32(v)
-#define fsw_u64_le_swap(v) (v)
-#define fsw_u64_be_swap(v) FSW_SWAPVALUE_U64(v)
-
-#define fsw_u16_le_sip(var)
-#define fsw_u16_be_sip(var) (var = FSW_SWAPVALUE_U16(var))
-#define fsw_u32_le_sip(var)
-#define fsw_u32_be_sip(var) (var = FSW_SWAPVALUE_U32(var))
-#define fsw_u64_le_sip(var)
-#define fsw_u64_be_sip(var) (var = FSW_SWAPVALUE_U64(var))
-
-#else
-#ifdef FSW_BIG_ENDIAN
-
-#define fsw_u16_le_swap(v) FSW_SWAPVALUE_U16(v)
-#define fsw_u16_be_swap(v) (v)
-#define fsw_u32_le_swap(v) FSW_SWAPVALUE_U32(v)
-#define fsw_u32_be_swap(v) (v)
-#define fsw_u64_le_swap(v) FSW_SWAPVALUE_U64(v)
-#define fsw_u64_be_swap(v) (v)
-
-#define fsw_u16_le_sip(var) (var = FSW_SWAPVALUE_U16(var))
-#define fsw_u16_be_sip(var)
-#define fsw_u32_le_sip(var) (var = FSW_SWAPVALUE_U32(var))
-#define fsw_u32_be_sip(var)
-#define fsw_u64_le_sip(var) (var = FSW_SWAPVALUE_U64(var))
-#define fsw_u64_be_sip(var)
-
-#else
-#fail Neither FSW_BIG_ENDIAN nor FSW_LITTLE_ENDIAN are defined
-#endif
-#endif
+#define FSW_SWAPVALUE_U64(v) bswap64(v)
 
 /*@}*/
 
@@ -192,6 +146,14 @@ typedef enum {
     FSW_STRING_TYPE_UTF16_SWAPPED
 } fsw_string_type_t;
 
+#ifdef FSW_LITTLE_ENDIAN
+#define FSW_STRING_TYPE_UTF16_LE FSW_STRING_TYPE_UTF16
+#define FSW_STRING_TYPE_UTF16_BE FSW_STRING_TYPE_UTF16_SWAPPED
+#else
+#define FSW_STRING_TYPE_UTF16_LE FSW_STRING_TYPE_UTF16_SWAPPED
+#define FSW_STRING_TYPE_UTF16_BE FSW_STRING_TYPE_UTF16
+#endif
+
 /**
  * Core: A string with explicit length and encoding information.
  */
@@ -202,14 +164,6 @@ struct fsw_string {
     int         size;               //!< Total data size in bytes
     void        *data;              //!< Data pointer (may be NULL if type is EMPTY or len is zero)
 };
-
-#ifdef FSW_LITTLE_ENDIAN
-#define FSW_STRING_TYPE_UTF16_LE FSW_STRING_TYPE_UTF16
-#define FSW_STRING_TYPE_UTF16_BE FSW_STRING_TYPE_UTF16_SWAPPED
-#else
-#define FSW_STRING_TYPE_UTF16_LE FSW_STRING_TYPE_UTF16_SWAPPED
-#define FSW_STRING_TYPE_UTF16_BE FSW_STRING_TYPE_UTF16
-#endif
 
 /** Static initializer for an empty string. */
 
