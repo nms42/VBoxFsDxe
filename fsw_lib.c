@@ -407,9 +407,9 @@ int fsw_streq_cstr(struct fsw_string *s1, const char *s2)
  * Init string
  */
 
-void fsw_string_setter(struct fsw_string *dest, fsw_string_type_t type, int len, int size, void *data)
+void fsw_string_setter(struct fsw_string *dest, fsw_string_type_t stype, int len, int size, void *data)
 {
-    dest->stype = type;
+    dest->stype = stype;
     dest->len = len;
     dest->size = size;
     dest->data = data;
