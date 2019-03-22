@@ -181,26 +181,26 @@ typedef enum {
 
 
 /**
- * Core: A string with explicit length and encoding information.
- */
-
-struct fsw_string {
-    int         type;               //!< Encoding of the string - empty, ISO-8859-1, UTF8, UTF16
-    int         len;                //!< Length in characters
-    int         size;               //!< Total data size in bytes
-    void        *data;              //!< Data pointer (may be NULL if type is EMPTY or len is zero)
-};
-
-/**
  * Possible string types / encodings. In the case of FSW_STRING_TYPE_EMPTY,
  * all other members of the fsw_string structure may be invalid.
  */
-enum {
+typedef enum {
     FSW_STRING_TYPE_EMPTY,
     FSW_STRING_TYPE_ISO88591,
     FSW_STRING_TYPE_UTF8,
     FSW_STRING_TYPE_UTF16,
     FSW_STRING_TYPE_UTF16_SWAPPED
+} fsw_string_type_t;
+
+/**
+ * Core: A string with explicit length and encoding information.
+ */
+
+struct fsw_string {
+    fsw_string_type_t stype;             //!< Encoding of the string - empty, ISO-8859-1, UTF8, UTF16
+    int         len;                //!< Length in characters
+    int         size;               //!< Total data size in bytes
+    void        *data;              //!< Data pointer (may be NULL if type is EMPTY or len is zero)
 };
 
 #ifdef FSW_LITTLE_ENDIAN
@@ -212,7 +212,10 @@ enum {
 #endif
 
 /** Static initializer for an empty string. */
+
 #define FSW_STRING_INIT { FSW_STRING_TYPE_EMPTY, 0, 0, NULL }
+
+/* Rudimentary list of strings */
 
 struct fsw_string_list {
     struct fsw_string_list *flink;
@@ -251,7 +254,7 @@ struct fsw_volume {
     void        *host_data;         //!< Hook for a host-specific data structure
     struct fsw_host_table *host_table;      //!< Dispatch table for host-specific functions
     struct fsw_fstype_table *fstype_table;  //!< Dispatch table for file system specific functions
-    int         host_string_type;   //!< String type used by the host environment
+    fsw_string_type_t host_string_type;   //!< String type used by the host environment
 };
 
 /**
@@ -264,7 +267,7 @@ typedef enum {
     FSW_DNODE_TYPE_DIR,
     FSW_DNODE_TYPE_SYMLINK,
     FSW_DNODE_TYPE_SPECIAL
-} dnode_type_t;
+} fsw_dnode_type_t;
 
 /**
  * Core: Represents a "directory node" - a file, directory, symlink, whatever.
@@ -279,7 +282,7 @@ struct fsw_dnode {
 
     fsw_u32     dnode_id;           //!< Unique id number (usually the inode number)
     fsw_u32     parent_id;          //!< Unique id number (usually the inode number)
-    dnode_type_t dtype;             //!< Type of the dnode - file, dir, symlink, special
+    fsw_dnode_type_t dtype;         //!< Type of the dnode - file, dir, symlink, special
     fsw_u64     size;               //!< Data size in bytes
 
     struct fsw_dnode *next;         //!< Doubly-linked list of all dnodes: previous dnode
@@ -292,26 +295,26 @@ struct fsw_dnode {
 };
 
 /**
- * Core: Stores the mapping of a region of a file to the data on disk.
- */
-
-struct fsw_extent {
-    int         type;               //!< Type of extent specification
-    fsw_u32     log_start;          //!< Starting logical block number
-    fsw_u32     log_count;          //!< Logical block count
-    fsw_u32     phys_start;         //!< Starting physical block number (for FSW_EXTENT_TYPE_PHYSBLOCK only)
-    void        *buffer;            //!< Allocated buffer pointer (for FSW_EXTENT_TYPE_BUFFER only)
-};
-
-/**
  * Possible extent representation types. FSW_EXTENT_TYPE_INVALID is for shandle's
  * internal use only, it must not be returned from a get_extent function.
  */
-enum {
+typedef enum {
     FSW_EXTENT_TYPE_INVALID,
     FSW_EXTENT_TYPE_SPARSE,
     FSW_EXTENT_TYPE_PHYSBLOCK,
     FSW_EXTENT_TYPE_BUFFER
+} fsw_extent_type_t;
+
+/**
+ * Core: Stores the mapping of a region of a file to the data on disk.
+ */
+
+struct fsw_extent {
+    fsw_extent_type_t extype;       //!< Type of extent specification
+    fsw_u32     log_start;          //!< Starting logical block number
+    fsw_u32     log_count;          //!< Logical block count
+    fsw_u32     phys_start;         //!< Starting physical block number (for FSW_EXTENT_TYPE_PHYSBLOCK only)
+    void        *buffer;            //!< Allocated buffer pointer (for FSW_EXTENT_TYPE_BUFFER only)
 };
 
 /**
@@ -361,7 +364,7 @@ enum {
 
 struct fsw_host_table
 {
-    int         native_string_type; //!< String type used by the host environment
+    fsw_string_type_t native_string_type; //!< String type used by the host environment
 
     void         (*change_blocksize)(struct fsw_volume *vol,
                                      fsw_u32 old_phys_blocksize, fsw_u32 old_log_blocksize,
@@ -483,8 +486,8 @@ fsw_status_t fsw_memdup(void **dest_out, void *src, int len);
 int          fsw_strlen(struct fsw_string *s);
 int          fsw_streq(struct fsw_string *s1, struct fsw_string *s2);
 int          fsw_streq_cstr(struct fsw_string *s1, const char *s2);
-void         fsw_string_setter(struct fsw_string *dest, int type, int len, int size, void *data);
-fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, int type, struct fsw_string *src);
+void         fsw_string_setter(struct fsw_string *dest, fsw_string_type_t stype, int len, int size, void *data);
+fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, fsw_string_type_t type, struct fsw_string *src);
 void         fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char separator);
 
 void         fsw_strfree(struct fsw_string *s);

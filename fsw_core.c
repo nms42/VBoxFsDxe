@@ -78,7 +78,7 @@ fsw_status_t fsw_mount(void *host_data,
     // initialize fields
     vol->phys_blocksize = 512;
     vol->log_blocksize  = 512;
-    vol->label.type     = FSW_STRING_TYPE_EMPTY;
+    vol->label.stype     = FSW_STRING_TYPE_EMPTY;
     vol->host_data      = host_data;
     vol->host_table     = host_table;
     vol->fstype_table   = fstype_table;
@@ -416,7 +416,7 @@ int fsw_dnode_is_root(struct fsw_dnode *dno)
       fsw_strlen(&dno->name) == 0) {
     return 1;
   }
-  
+
   return 0;
 }
 
@@ -484,7 +484,7 @@ void fsw_dnode_release(struct fsw_dnode *dno)
     // release our pointer to the parent, possibly deallocating it, too
     if (parent_dno)
         fsw_dnode_release(parent_dno);
-	
+
 	fsw_free(dno);
 }
 
@@ -504,20 +504,20 @@ void fsw_dnode_release(struct fsw_dnode *dno)
 fsw_status_t fsw_dnode_fill(struct fsw_dnode *dno)
 {
 	fsw_status_t status;
-	
+
 	// Sync parent info
-	
+
 	if (dno->parent_id == 0 && dno->parent != NULL)
 		dno->parent_id = dno->parent->dnode_id;
-	
+
 	if (dno->vol != NULL) {
 		if (dno->parent == NULL && dno->parent_id != 0)
 			dno->parent = fsw_vol_lookup_dnode_id(dno->vol, dno->parent_id);
-		
+
 		status = dno->vol->fstype_table->dnode_fill(dno->vol, dno);
 	} else
 		status = FSW_UNKNOWN_ERROR;	// No volume -- no dance
-	
+
 	return status;
 }
 
@@ -944,22 +944,22 @@ errorexit:
 
 fsw_status_t fsw_shandle_open(struct fsw_dnode *dno, struct fsw_shandle *shand)
 {
-    fsw_status_t    status;
-    struct fsw_volume *vol = dno->vol;
+	fsw_status_t    status;
+	struct fsw_volume *vol = dno->vol;
 
-    // read full dnode information into memory
-    status = vol->fstype_table->dnode_fill(vol, dno);
+	// read full dnode information into memory
+	status = vol->fstype_table->dnode_fill(vol, dno);
 
-    if (status == FSW_SUCCESS) {
-	// setup shandle
-	fsw_dnode_retain(dno);
+	if (status == FSW_SUCCESS) {
+		// setup shandle
+		fsw_dnode_retain(dno);
 
-	shand->dnode = dno;
-	shand->pos = 0;
-	shand->extent.type = FSW_EXTENT_TYPE_INVALID;
-    }
+		shand->dnode = dno;
+		shand->pos = 0;
+		shand->extent.extype = FSW_EXTENT_TYPE_INVALID;
+	}
 
-    return status;
+	return status;
 }
 
 /**
@@ -971,7 +971,7 @@ fsw_status_t fsw_shandle_open(struct fsw_dnode *dno, struct fsw_shandle *shand)
 
 void fsw_shandle_close(struct fsw_shandle *shand)
 {
-    if (shand->extent.type == FSW_EXTENT_TYPE_BUFFER)
+    if (shand->extent.extype == FSW_EXTENT_TYPE_BUFFER)
         fsw_free(shand->extent.buffer);
     fsw_dnode_release(shand->dnode);
 }
@@ -1008,18 +1008,18 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
     while (buflen > 0) {
         // get extent for the current logical block
         log_bno = pos / vol->log_blocksize;
-        if (shand->extent.type == FSW_EXTENT_TYPE_INVALID ||
+        if (shand->extent.extype == FSW_EXTENT_TYPE_INVALID ||
             log_bno < shand->extent.log_start ||
             log_bno >= shand->extent.log_start + shand->extent.log_count) {
 
-            if (shand->extent.type == FSW_EXTENT_TYPE_BUFFER)
+            if (shand->extent.extype == FSW_EXTENT_TYPE_BUFFER)
                 fsw_free(shand->extent.buffer);
 
             // ask the file system for the proper extent
             shand->extent.log_start = log_bno;
             status = vol->fstype_table->get_extent(vol, dno, &shand->extent);
             if (status != FSW_SUCCESS) {
-                shand->extent.type = FSW_EXTENT_TYPE_INVALID;
+                shand->extent.extype = FSW_EXTENT_TYPE_INVALID;
                 return status;
             }
         }
@@ -1027,7 +1027,7 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
         pos_in_extent = pos - shand->extent.log_start * vol->log_blocksize;
 
         // dispatch by extent type
-        if (shand->extent.type == FSW_EXTENT_TYPE_PHYSBLOCK) {
+        if (shand->extent.extype == FSW_EXTENT_TYPE_PHYSBLOCK) {
             // convert to physical block number and offset
             phys_bno = shand->extent.phys_start + pos_in_extent / vol->phys_blocksize;
             pos_in_physblock = pos_in_extent & (vol->phys_blocksize - 1);
@@ -1044,7 +1044,7 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
             fsw_memcpy(buffer, block_buffer + pos_in_physblock, copylen);
             fsw_block_release(vol, phys_bno, block_buffer);
 
-        } else if (shand->extent.type == FSW_EXTENT_TYPE_BUFFER) {
+        } else if (shand->extent.extype == FSW_EXTENT_TYPE_BUFFER) {
             copylen = shand->extent.log_count * vol->log_blocksize - pos_in_extent;
             if (copylen > buflen)
                 copylen = buflen;
@@ -1073,26 +1073,26 @@ fsw_status_t fsw_dnode_id_lookup(struct VOLSTRUCTNAME *vol, fsw_u32 dnid, struct
 {
   fsw_status_t status;
   struct fsw_dnode *dn;
-  
+
   dn = fsw_vol_lookup_dnode_id(vol, dnid);
-  
+
   if (dn != NULL) {
     *dn_out = dn;
     return FSW_SUCCESS;
   }
-  
+
   status = fsw_dnode_create(vol, NULL, dnid, FSW_DNODE_TYPE_UNKNOWN, NULL, &dn);
-  
+
   if (status != FSW_SUCCESS)
     return status;
-  
+
   status = fsw_dnode_fill(dn);
-  
+
   if (status != FSW_SUCCESS) {
     fsw_dnode_release(dn);
     return status;
   }
-  
+
   *dn_out = dn;
   return FSW_SUCCESS;
 }
@@ -1103,17 +1103,17 @@ fsw_status_t fsw_dnode_id_fullpath(struct fsw_volume *vol, fsw_u32 dnid, int sty
   struct fsw_dnode *dn;
   struct fsw_string_list *slst;
   struct fsw_string *name;
-  
+
   slst = NULL;
   status = fsw_dnode_id_lookup(vol, dnid, &dn);
-  
+
   while (status == FSW_SUCCESS && !fsw_dnode_is_root(dn)) {
     status = fsw_alloc(sizeof(*name), &name);
-    
+
     if (status == FSW_SUCCESS) {
       fsw_string_setter(name, stype, 0, 0, NULL);
       status = fsw_strdup_coerce(name, stype, &dn->name);
-      
+
       if (status == FSW_SUCCESS) {
         slst = fsw_string_list_prepend(slst, name);
         dnid = dn->parent_id;
@@ -1121,12 +1121,12 @@ fsw_status_t fsw_dnode_id_fullpath(struct fsw_volume *vol, fsw_u32 dnid, int sty
       }
     }
   }
-  
+
   if (status != FSW_SUCCESS) {
     fsw_string_list_free(slst);
     return status;
   }
-  
+
   *slist = slst;
   return FSW_SUCCESS;
 }

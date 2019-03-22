@@ -46,7 +46,7 @@
 
 // function prototypes
 
-fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, dnode_type_t required_type,
+fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, fsw_dnode_type_t required_type,
                                 struct fsw_shandle *shand);
 
 void fsw_posix_change_blocksize(struct fsw_volume *vol,
@@ -295,7 +295,7 @@ int fsw_posix_closedir(struct fsw_posix_dir *dir)
  * Open a shand of a required type by path.
  */
 
-fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, dnode_type_t required_type, struct fsw_shandle *shand)
+fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, fsw_dnode_type_t required_type, struct fsw_shandle *shand)
 {
     fsw_status_t        status;
     struct fsw_dnode    *dno;
