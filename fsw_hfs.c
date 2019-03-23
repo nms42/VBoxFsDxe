@@ -349,7 +349,7 @@ fsw_hfs_volume_mount (
 
           vnlen = be16_to_cpu (ck->nodeName.length);
           fsw_string_setter (&vn, FSW_STRING_TYPE_UTF16_BE, vnlen, vnlen * sizeof(fsw_u16), ck->nodeName.unicode);
-          fsw_strfree (&vol->g.label);
+          fsw_string_mkempty (&vol->g.label);
           status =
             fsw_strdup_coerce (&vol->g.label, vol->g.host_string_type, &vn);
           CHECK (status != FSW_SUCCESS);
@@ -1206,7 +1206,7 @@ done:
 	fsw_free (node);
 
 	if (free_data)
-		fsw_strfree (&rec_name);
+		fsw_string_mkempty (&rec_name);
 
 	return status;
 }
@@ -1251,14 +1251,13 @@ fsw_hfs_dir_read (
 		param.shandle = shand;
 		param.parent = dno->g.dnode_id;
 		param.cur_pos = 0;
-		status = fsw_hfs_btree_iterate_node (&vol->catalog_tree, node, ptr,
-											 fsw_hfs_btree_visit_node, &param);
+		status = fsw_hfs_btree_iterate_node (&vol->catalog_tree, node, ptr, fsw_hfs_btree_visit_node, &param);
 
 		if (status == FSW_SUCCESS)
 			status = create_hfs_dnode (dno, &param.file_info, child_dno_out);
 	}
 
-	fsw_strfree (&rec_name);
+	fsw_string_mkempty(&rec_name);
 
 	return status;
 }

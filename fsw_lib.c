@@ -417,8 +417,8 @@ void fsw_string_setter(struct fsw_string *dest, fsw_string_type_t stype, int len
 
 /**
  * Creates a duplicate of a string, converting it to the given encoding during the copy.
- * If the function returns FSW_SUCCESS, the caller must free the string later with
- * fsw_strfree.
+ * If the function returns FSW_SUCCESS, the caller must free the string datum later with
+ * fsw_string_mkempty.
  */
 
 fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, fsw_string_type_t type, struct fsw_string *src)
@@ -534,15 +534,30 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
 }
 
 /**
- * Frees the memory used by a string returned from fsw_strdup_coerce.
+ * Empties a string.
+ */
+
+void fsw_string_mkempty(struct fsw_string *s)
+{
+    if (s->stype != FSW_STRING_TYPE_EMPTY && s->data != NULL)
+        fsw_free(s->data);
+
+    fsw_string_setter(s, FSW_STRING_TYPE_EMPTY, 0, 0, NULL);
+}
+
+/**
+ * Frees the memory used by a string.
  */
 
 void fsw_strfree(struct fsw_string *s)
 {
-    if (s->stype != FSW_STRING_TYPE_EMPTY && s->data != NULL)
-        fsw_free(s->data);
-    s->stype = FSW_STRING_TYPE_EMPTY;
+	fsw_string_mkempty(s);
+	fsw_free(s);
 }
+
+/**
+ * Rudimentary list of strings
+ */
 
 void fsw_string_list_free(struct fsw_string_list *lst)
 {

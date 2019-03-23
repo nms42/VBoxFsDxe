@@ -111,12 +111,13 @@ void fsw_unmount(struct fsw_volume *vol)
 {
     if (vol->root)
         fsw_dnode_release(vol->root);
+
     // TODO: check that no other dnodes are still around
 
     vol->fstype_table->volume_free(vol);
 
     fsw_blockcache_free(vol);
-    fsw_strfree(&vol->label);
+    fsw_string_mkempty(&vol->label);
     fsw_free(vol);
 }
 
@@ -482,7 +483,7 @@ void fsw_dnode_release(struct fsw_dnode *dno)
     // run fstype-specific cleanup
     vol->fstype_table->dnode_free(vol, dno);
 
-    fsw_strfree(&dno->name);
+    fsw_string_mkempty(&dno->name);
 
     // release our pointer to the parent, possibly deallocating it, too
     if (parent_dno)
@@ -816,7 +817,7 @@ fsw_status_t fsw_dnode_dir_read(struct fsw_shandle *shand, struct fsw_dnode **ch
  *
  * If the function returns FSW_SUCCESS, the string handle provided by the caller is
  * filled with a string in the host's preferred encoding. The caller is responsible
- * for calling fsw_strfree on the string.
+ * for calling fsw_string_mkempty on the string.
  */
 
 fsw_status_t fsw_dnode_readlink(struct fsw_dnode *dno, struct fsw_string *target_name)
@@ -841,7 +842,7 @@ fsw_status_t fsw_dnode_readlink(struct fsw_dnode *dno, struct fsw_string *target
  *
  * If the function returns FSW_SUCCESS, the string handle provided by the caller is
  * filled with a string in the host's preferred encoding. The caller is responsible
- * for calling fsw_strfree on the string.
+ * for calling fsw_string_mkempty on the string.
  */
 
 fsw_status_t fsw_dnode_readlink_data(struct fsw_dnode *dno, struct fsw_string *link_target)
@@ -917,7 +918,7 @@ fsw_status_t fsw_dnode_resolve(struct fsw_dnode *dno, struct fsw_dnode **target_
 
         // resolve it
         status = fsw_dnode_lookup_path(dno->parent, &target_name, '/', &target_dno);
-        fsw_strfree(&target_name);
+        fsw_string_mkempty(&target_name);
         if (status != FSW_SUCCESS)
             goto errorexit;
 

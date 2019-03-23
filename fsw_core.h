@@ -444,6 +444,7 @@ void         fsw_string_setter(struct fsw_string *dest, fsw_string_type_t stype,
 fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, fsw_string_type_t type, struct fsw_string *src);
 void         fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char separator);
 
+void         fsw_string_mkempty(struct fsw_string *s);
 void         fsw_strfree(struct fsw_string *s);
 fsw_u16      fsw_to_lower(fsw_u16 ch);
 
