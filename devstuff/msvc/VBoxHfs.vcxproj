@@ -51,7 +51,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>HOST_MSWIN;FSTYPE=hfs;VBOXHFS_BTREE_BINSEARCH;FSW_DEBUG_LEVEL=0;FSW_DNODE_CACHE_SIZE=7;WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;open=_open;lseek=_lseek;mode_t=int;off_t=int64;ssize_t=long;bswap16=_byteswap_ushort;bswap32=_byteswap_ulong;bswap64=_byteswap_uint64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>HOST_MSWIN;FSTYPE=hfs;FSW_DEBUG_LEVEL=0;FSW_DNODE_CACHE_SIZE=0;WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;open=_open;lseek=_lseek;mode_t=int;off_t=int64;ssize_t=long;bswap16=_byteswap_ushort;bswap32=_byteswap_ulong;bswap64=_byteswap_uint64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\mswin;..\src;..\..</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
