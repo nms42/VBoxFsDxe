@@ -44,6 +44,12 @@
 
 // functions
 
+static fsw_status_t fsw_hfs_unistr2string (
+	struct fsw_string* fs,
+	fsw_string_type_t fst,
+	HFSUniStr255* us
+);
+
 static fsw_status_t fsw_hfs_volume_mount (
   struct fsw_hfs_volume *vol
 );
@@ -114,6 +120,18 @@ struct fsw_fstype_table FSW_FSTYPE_TABLE_NAME (
   fsw_hfs_dir_read,
   fsw_hfs_readlink
 };
+
+static fsw_status_t
+fsw_hfs_unistr2string(struct fsw_string* fs, fsw_string_type_t fst, HFSUniStr255* us)
+{
+	fsw_u16 uslen;
+	struct fsw_string ws;
+
+	uslen = be16_to_cpu(us->length);
+	fsw_string_setter(&ws, FSW_STRING_TYPE_UTF16_BE, uslen, sizeof(fsw_u16) * uslen, us->unicode);
+
+	return fsw_strdup_coerce(fs, fst, &ws);
+}
 
 static fsw_s32
 fsw_hfs_read_block (
@@ -204,180 +222,173 @@ fsw_hfs_compute_shift (
 
 static fsw_status_t
 fsw_hfs_volume_mount (
-  struct fsw_hfs_volume *vol
-)
+					  struct fsw_hfs_volume *vol
+					  )
 {
-  fsw_status_t status, rv;
-  void *buffer = NULL;
-  HFSPlusVolumeHeader *voldesc;
-  fsw_u32 blockno;
+	fsw_status_t status, rv;
+	void *buffer = NULL;
+	HFSPlusVolumeHeader *voldesc;
+	fsw_u32 blockno;
 
-  rv = FSW_UNSUPPORTED;
+	rv = FSW_UNSUPPORTED;
 
-  vol->primary_voldesc = NULL;
-  fsw_set_blocksize (vol, HFS_BLOCKSIZE, HFS_BLOCKSIZE);
-  blockno = HFS_SUPERBLOCK_BLOCKNO;
+	vol->primary_voldesc = NULL;
+	fsw_set_blocksize (vol, HFS_BLOCKSIZE, HFS_BLOCKSIZE);
+	blockno = HFS_SUPERBLOCK_BLOCKNO;
 
 #define CHECK(s)         \
-        if (status != FSW_SUCCESS)  {   \
-            rv = status; \
-            break;       \
-        }
+if (status != FSW_SUCCESS)  {   \
+rv = status; \
+break;       \
+}
 
-  vol->emb_block_off = 0;
-  vol->hfs_kind = 0;
-  do {
-    fsw_u16 signature;
-    BTHeaderRec tree_header;
-    fsw_s32 r;
-    fsw_u32 block_size;
+	vol->emb_block_off = 0;
+	vol->hfs_kind = 0;
+	do {
+		fsw_u16 signature;
+		BTHeaderRec tree_header;
+		fsw_s32 r;
+		fsw_u32 block_size;
 
-    status = fsw_block_get (vol, blockno, 0, &buffer);
-    CHECK (status != FSW_SUCCESS);
-    voldesc = (HFSPlusVolumeHeader *) buffer;
-    signature = be16_to_cpu (voldesc->signature);
+		status = fsw_block_get (vol, blockno, 0, &buffer);
+		CHECK (status != FSW_SUCCESS);
+		voldesc = (HFSPlusVolumeHeader *) buffer;
+		signature = be16_to_cpu (voldesc->signature);
 
-    if ((signature == kHFSPlusSigWord) || (signature == kHFSXSigWord)) {
-      if (vol->hfs_kind == 0) {
-        FSW_MSG_DEBUGV ((FSW_MSGSTR ("fsw_hfs: Found HFS+\n")));
-        vol->hfs_kind = FSW_HFS_PLUS;
-      }
-    }
-    else if (signature == kHFSSigWord) {
-      HFSMasterDirectoryBlock *mdb = (HFSMasterDirectoryBlock *) buffer;
+		if ((signature == kHFSPlusSigWord) || (signature == kHFSXSigWord)) {
+			if (vol->hfs_kind == 0) {
+				FSW_MSG_DEBUGV ((FSW_MSGSTR ("fsw_hfs: Found HFS+\n")));
+				vol->hfs_kind = FSW_HFS_PLUS;
+			}
+		}
+		else if (signature == kHFSSigWord) {
+			HFSMasterDirectoryBlock *mdb = (HFSMasterDirectoryBlock *) buffer;
 
-      if (be16_to_cpu (mdb->drEmbedSigWord) == kHFSPlusSigWord) {
-        FSW_MSG_DEBUGV ((FSW_MSGSTR
-                         ("fsw_hfs: Found HFS+ inside HFS, untested\n")));
-        vol->hfs_kind = FSW_HFS_PLUS_EMB;
-        vol->emb_block_off = be32_to_cpu (mdb->drEmbedExtent.startBlock);
-        fsw_block_release (vol, blockno, buffer);
-        blockno += vol->emb_block_off;
-        /* retry */
-        continue;
-      }
-      else {
-        FSW_MSG_DEBUGV ((FSW_MSGSTR
-                         ("fsw_hfs: Found plain HFS, unsupported\n")));
-        vol->hfs_kind = FSW_HFS_PLAIN;
-      }
-      rv = FSW_UNSUPPORTED;
-      break;
-    }
-    else {
-      rv = FSW_UNSUPPORTED;
-      break;
-    }
+			if (be16_to_cpu (mdb->drEmbedSigWord) == kHFSPlusSigWord) {
+				FSW_MSG_DEBUGV ((FSW_MSGSTR
+								 ("fsw_hfs: Found HFS+ inside HFS, untested\n")));
+				vol->hfs_kind = FSW_HFS_PLUS_EMB;
+				vol->emb_block_off = be32_to_cpu (mdb->drEmbedExtent.startBlock);
+				fsw_block_release (vol, blockno, buffer);
+				blockno += vol->emb_block_off;
+				/* retry */
+				continue;
+			}
+			else {
+				FSW_MSG_DEBUGV ((FSW_MSGSTR
+								 ("fsw_hfs: Found plain HFS, unsupported\n")));
+				vol->hfs_kind = FSW_HFS_PLAIN;
+			}
+			rv = FSW_UNSUPPORTED;
+			break;
+		}
+		else {
+			rv = FSW_UNSUPPORTED;
+			break;
+		}
 
-    status =
-      fsw_memdup ((void **) &vol->primary_voldesc, voldesc, sizeof (*voldesc));
-    CHECK (status != FSW_SUCCESS);
+		status =
+		fsw_memdup ((void **) &vol->primary_voldesc, voldesc, sizeof (*voldesc));
+		CHECK (status != FSW_SUCCESS);
 
-    block_size = be32_to_cpu (voldesc->blockSize);
-    vol->block_size_shift = fsw_hfs_compute_shift (block_size);
+		block_size = be32_to_cpu (voldesc->blockSize);
+		vol->block_size_shift = fsw_hfs_compute_shift (block_size);
 
-    fsw_block_release (vol, blockno, buffer);
-    buffer = NULL;
-    voldesc = NULL;
-    fsw_set_blocksize (vol, block_size, block_size);
+		fsw_block_release (vol, blockno, buffer);
+		buffer = NULL;
+		voldesc = NULL;
+		fsw_set_blocksize (vol, block_size, block_size);
 
-    /* Set default volume name */
-    fsw_string_setter (&vol->g.label, FSW_STRING_TYPE_EMPTY, 0, 0, NULL);
+		/* Set default volume name */
+		fsw_string_setter (&vol->g.label, FSW_STRING_TYPE_EMPTY, 0, 0, NULL);
 
-    /* Setup catalog dnode */
-    status =
-      fsw_dnode_create_root (vol, kHFSCatalogFileID, &vol->catalog_tree.btfile);
-    CHECK (status != FSW_SUCCESS);
-    fsw_memcpy (vol->catalog_tree.btfile->extents,
-                vol->primary_voldesc->catalogFile.extents,
-                sizeof vol->catalog_tree.btfile->extents);
-    vol->catalog_tree.btfile->g.size =
-      be64_to_cpu (vol->primary_voldesc->catalogFile.logicalSize);
+		/* Setup catalog dnode */
+		status =
+		fsw_dnode_create_root (vol, kHFSCatalogFileID, &vol->catalog_tree.btfile);
+		CHECK (status != FSW_SUCCESS);
+		fsw_memcpy (vol->catalog_tree.btfile->extents,
+					vol->primary_voldesc->catalogFile.extents,
+					sizeof vol->catalog_tree.btfile->extents);
+		vol->catalog_tree.btfile->g.size =
+		be64_to_cpu (vol->primary_voldesc->catalogFile.logicalSize);
 
-    /* Setup extents overflow file */
-    status =
-      fsw_dnode_create_root (vol, kHFSExtentsFileID, &vol->extents_tree.btfile);
-    CHECK (status != FSW_SUCCESS);
-    fsw_memcpy (vol->extents_tree.btfile->extents,
-                vol->primary_voldesc->extentsFile.extents,
-                sizeof vol->extents_tree.btfile->extents);
-    vol->extents_tree.btfile->g.size =
-      be64_to_cpu (vol->primary_voldesc->extentsFile.logicalSize);
+		/* Setup extents overflow file */
+		status =
+		fsw_dnode_create_root (vol, kHFSExtentsFileID, &vol->extents_tree.btfile);
+		CHECK (status != FSW_SUCCESS);
+		fsw_memcpy (vol->extents_tree.btfile->extents,
+					vol->primary_voldesc->extentsFile.extents,
+					sizeof vol->extents_tree.btfile->extents);
+		vol->extents_tree.btfile->g.size =
+		be64_to_cpu (vol->primary_voldesc->extentsFile.logicalSize);
 
-    /* Setup the root dnode */
-    status = fsw_dnode_create_root (vol, kHFSRootFolderID, &vol->g.root);
-    CHECK (status != FSW_SUCCESS);
+		/* Setup the root dnode */
+		status = fsw_dnode_create_root (vol, kHFSRootFolderID, &vol->g.root);
+		CHECK (status != FSW_SUCCESS);
 
-    /*
-     * Read catalog file, we know that first record is in the first node, right after
-     * the node descriptor.
-     */
-    r =
-      fsw_hfs_read_file (vol->catalog_tree.btfile, sizeof (BTNodeDescriptor),
-                         sizeof (BTHeaderRec), (fsw_u8 *) & tree_header);
-    if (r != sizeof (BTHeaderRec)) {
-      rv = FSW_VOLUME_CORRUPTED;
-      break;
-    }
-    vol->case_sensitive = (signature == kHFSXSigWord) &&
-      (tree_header.keyCompareType == kHFSBinaryCompare);
-    vol->catalog_tree.btroot_node = be32_to_cpu (tree_header.rootNode);
-    vol->catalog_tree.btnode_size = be16_to_cpu (tree_header.nodeSize);
+		/*
+		 * Read catalog file, we know that first record is in the first node, right after
+		 * the node descriptor.
+		 */
+		r =
+		fsw_hfs_read_file (vol->catalog_tree.btfile, sizeof (BTNodeDescriptor),
+						   sizeof (BTHeaderRec), (fsw_u8 *) & tree_header);
+		if (r != sizeof (BTHeaderRec)) {
+			rv = FSW_VOLUME_CORRUPTED;
+			break;
+		}
+		vol->case_sensitive = (signature == kHFSXSigWord) &&
+		(tree_header.keyCompareType == kHFSBinaryCompare);
+		vol->catalog_tree.btroot_node = be32_to_cpu (tree_header.rootNode);
+		vol->catalog_tree.btnode_size = be16_to_cpu (tree_header.nodeSize);
 
-    /* Take volume Name before tree_header overwritten */
-    {
-      fsw_u32 firstLeafNum;
-      fsw_u64 catfOffset;
-      fsw_u8 cbuff[sizeof (BTNodeDescriptor) + sizeof (HFSPlusCatalogKey)];
+		/* Take volume Name before tree_header overwritten */
+		{
+			fsw_u32 firstLeafNum;
+			fsw_u64 catfOffset;
+			fsw_u8 cbuff[sizeof (BTNodeDescriptor) + sizeof (HFSPlusCatalogKey)];
 
-      firstLeafNum = be32_to_cpu (tree_header.firstLeafNode);
-      catfOffset = (fsw_u64)vol->catalog_tree.btnode_size * firstLeafNum;
+			firstLeafNum = be32_to_cpu (tree_header.firstLeafNode);
+			catfOffset = (fsw_u64)vol->catalog_tree.btnode_size * firstLeafNum;
 
-      r =
-        fsw_hfs_read_file (vol->catalog_tree.btfile, catfOffset, sizeof (cbuff),
-                           cbuff);
+			r =
+			fsw_hfs_read_file (vol->catalog_tree.btfile, catfOffset, sizeof (cbuff),
+							   cbuff);
 
-      if (r == sizeof (cbuff)) {
-        BTNodeDescriptor *btnd;
-        HFSPlusCatalogKey *ck;
+			if (r == sizeof (cbuff)) {
+				BTNodeDescriptor *btnd;
+				HFSPlusCatalogKey *ck;
 
-        btnd = (BTNodeDescriptor *) (void *)cbuff;
-        ck = (HFSPlusCatalogKey *) (void *) (cbuff + sizeof (BTNodeDescriptor));
-        if (btnd->kind == kBTLeafNode && be32_to_cpu (ck->parentID) == kHFSRootParentID) {
-          struct fsw_string vn;
-          int vnlen;
+				btnd = (BTNodeDescriptor *) (void *)cbuff;
+				ck = (HFSPlusCatalogKey *) (void *) (cbuff + sizeof (BTNodeDescriptor));
+				if (btnd->kind == kBTLeafNode && be32_to_cpu (ck->parentID) == kHFSRootParentID) {
+					status = fsw_hfs_unistr2string(&vol->g.label, vol->g.host_string_type, &ck->nodeName);
+					CHECK (status != FSW_SUCCESS);
+				}
+			}
+		}
 
-          vnlen = be16_to_cpu (ck->nodeName.length);
-          fsw_string_setter (&vn, FSW_STRING_TYPE_UTF16_BE, vnlen, vnlen * sizeof(fsw_u16), ck->nodeName.unicode);
-          fsw_string_mkempty (&vol->g.label);
-          status =
-            fsw_strdup_coerce (&vol->g.label, vol->g.host_string_type, &vn);
-          CHECK (status != FSW_SUCCESS);
-        }
-      }
-    }
+		/* Read extents overflow file */
+		r =
+		fsw_hfs_read_file (vol->extents_tree.btfile, sizeof (BTNodeDescriptor),
+						   sizeof (BTHeaderRec), (fsw_u8 *) & tree_header);
+		if (r != sizeof (BTHeaderRec)) {
+			rv = FSW_VOLUME_CORRUPTED;
+			break;
+		}
 
-    /* Read extents overflow file */
-    r =
-      fsw_hfs_read_file (vol->extents_tree.btfile, sizeof (BTNodeDescriptor),
-                         sizeof (BTHeaderRec), (fsw_u8 *) & tree_header);
-    if (r != sizeof (BTHeaderRec)) {
-      rv = FSW_VOLUME_CORRUPTED;
-      break;
-    }
+		vol->extents_tree.btroot_node = be32_to_cpu (tree_header.rootNode);
+		vol->extents_tree.btnode_size = be16_to_cpu (tree_header.nodeSize);
 
-    vol->extents_tree.btroot_node = be32_to_cpu (tree_header.rootNode);
-    vol->extents_tree.btnode_size = be16_to_cpu (tree_header.nodeSize);
-
-    rv = FSW_SUCCESS;
-  } while (0);
+		rv = FSW_SUCCESS;
+	} while (0);
 
 #undef CHECK
 
-  if (buffer != NULL)
-    fsw_block_release (vol, blockno, buffer);
+	if (buffer != NULL)
+		fsw_block_release (vol, blockno, buffer);
 
-  return rv;
+	return rv;
 }
 
 /**
