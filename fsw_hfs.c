@@ -570,133 +570,141 @@ static fsw_status_t
 fsw_hfs_btree_read_node (
 						 struct fsw_hfs_btree *btree,
 						 fsw_u32 nodenum,
-						 fsw_u8* buffer
+						 fsw_u8** outbuf
 						 )
 {
+	fsw_status_t status;
+	fsw_u8* buffer;
 	fsw_u32 offset;
 
-	if ((fsw_u32) fsw_hfs_read_file
-		(btree->btfile, (fsw_u64) nodenum * btree->btnode_size, btree->btnode_size,
-		 buffer) != btree->btnode_size) {
-			return FSW_VOLUME_CORRUPTED;
-		}
+	status = fsw_alloc (btree->btnode_size, &buffer);
 
-	offset = fsw_hfs_btree_recoffset(btree, (BTNodeDescriptor *) (void *)buffer, 0);
-	if (offset != sizeof (BTNodeDescriptor)) {
-		return FSW_VOLUME_CORRUPTED;
+	if (status == FSW_SUCCESS) {
+		status = FSW_VOLUME_CORRUPTED;
+
+		if ((fsw_u32) fsw_hfs_read_file(btree->btfile, (fsw_u64) nodenum * btree->btnode_size, btree->btnode_size,
+										buffer) == btree->btnode_size) {
+			offset = fsw_hfs_btree_recoffset(btree, (BTNodeDescriptor *) (void *)buffer, 0);
+
+			if (offset == sizeof (BTNodeDescriptor)) {
+				*outbuf = buffer;
+				status = FSW_SUCCESS;
+			}
+		}
 	}
 
-	return FSW_SUCCESS;
+	if (status != FSW_SUCCESS)
+		fsw_free(buffer);
+
+	return status;
 }
 
 static fsw_status_t
 fsw_hfs_btree_search (
-  struct fsw_hfs_btree *btree,
-  BTreeKey *key,
-  int (*compare_keys) (BTreeKey *key1,
-                       BTreeKey *key2),
-  BTNodeDescriptor **result,
-  fsw_u32 *key_offset
-)
+					  struct fsw_hfs_btree *btree,
+					  BTreeKey *key,
+					  int (*compare_keys) (BTreeKey *key1,
+										   BTreeKey *key2),
+					  BTNodeDescriptor **result,
+					  fsw_u32 *key_offset
+					  )
 {
-  fsw_status_t status;
-  fsw_u8 *buffer = NULL;
-  BTNodeDescriptor *node;
-  fsw_u32 currnode;
-  fsw_u32 recnum;
+	fsw_status_t status;
+	fsw_u8 *buffer = NULL;
+	BTNodeDescriptor *node;
+	fsw_u32 currnode;
+	fsw_u32 recnum;
 
-  currnode = btree->btroot_node;
-  status = fsw_alloc (btree->btnode_size, &buffer);
-  if (status != FSW_SUCCESS)
-    return status;
-  node = (BTNodeDescriptor *) (void *)buffer;
+	currnode = btree->btroot_node;
 
-  for (;;) {
-    fsw_s32 cmp = 0;
-    fsw_u32 count;
-    BTreeKey *currkey;
+	for (;;) {
+		fsw_s32 cmp = 0;
+		fsw_u32 count;
+		BTreeKey *currkey;
 
-    status = fsw_hfs_btree_read_node (btree, currnode, buffer);
-    if (status != FSW_SUCCESS)
-      break;
+		status = fsw_hfs_btree_read_node (btree, currnode, &buffer);
 
-    count = be16_to_cpu (node->numRecords);
+		if (status != FSW_SUCCESS)
+			break;
 
-    if (count == 0) {
-      status = FSW_NOT_FOUND;
-      break;
-    }
+		node = (BTNodeDescriptor *) (void *)buffer;
+		count = be16_to_cpu (node->numRecords);
+
+		if (count == 0) {
+			status = FSW_NOT_FOUND;
+			break;
+		}
 
 #ifndef VBOXHFS_BTREE_BINSEARCH
-    /* linear search */
-    for (recnum = 0; recnum < count; recnum++) {
-      currkey = fsw_hfs_btree_rec (btree, node, recnum);
-      cmp = compare_keys (currkey, key);
+		/* linear search */
+		for (recnum = 0; recnum < count; recnum++) {
+			currkey = fsw_hfs_btree_rec (btree, node, recnum);
+			cmp = compare_keys (currkey, key);
 
-      if (node->kind == kBTLeafNode) {
-        if (cmp == 0) {
-          *result = node;
-          *key_offset = recnum;
-          return FSW_SUCCESS;
-        }
-      } else if (node->kind == kBTIndexNode) {
-        if (cmp > 0)
-          break;
-        currnode = fsw_hfs_btree_next_node_num (currkey);
-      }
-    }
+			if (node->kind == kBTLeafNode) {
+				if (cmp == 0) {
+					*result = node;
+					*key_offset = recnum;
+					return FSW_SUCCESS;
+				}
+			} else if (node->kind == kBTIndexNode) {
+				if (cmp > 0)
+					break;
+				currnode = fsw_hfs_btree_next_node_num (currkey);
+			}
+		}
 
-    if (node->kind == kBTLeafNode) {
-      status = FSW_NOT_FOUND;
-      break;
-    }
+		if (node->kind == kBTLeafNode) {
+			status = FSW_NOT_FOUND;
+			break;
+		}
 
-    if (cmp <= 0 && node->fLink != 0) {
-      currnode = be32_to_cpu (node->fLink);
-    }
+		if (cmp <= 0 && node->fLink != 0) {
+			currnode = be32_to_cpu (node->fLink);
+		}
 #else
-    /* binary search */
-    {
-      fsw_u32 lower = 0;
-      fsw_u32 upper = count - 1;
-      currkey = NULL;
+		/* binary search */
+		{
+			fsw_u32 lower = 0;
+			fsw_u32 upper = count - 1;
+			currkey = NULL;
 
-      while (lower <= upper) {
-        recnum = (lower + upper) / 2;
+			while (lower <= upper) {
+				recnum = (lower + upper) / 2;
 
-        currkey = fsw_hfs_btree_rec (btree, node, recnum);
-        cmp = compare_keys (currkey, key);
+				currkey = fsw_hfs_btree_rec (btree, node, recnum);
+				cmp = compare_keys (currkey, key);
 
-        if (cmp > 0) {
-          upper = recnum - 1;
-        } else if (cmp < 0) {
-          lower = recnum + 1;
-        } else if (cmp == 0) {
-          if (node->kind == kBTLeafNode) { /* Found! */
-            *result = node;
-            *key_offset = recnum;
-            return FSW_SUCCESS;
-          }
-        }
-      }
+				if (cmp > 0) {
+					upper = recnum - 1;
+				} else if (cmp < 0) {
+					lower = recnum + 1;
+				} else if (cmp == 0) {
+					if (node->kind == kBTLeafNode) { /* Found! */
+						*result = node;
+						*key_offset = recnum;
+						return FSW_SUCCESS;
+					}
+				}
+			}
 
-      if (cmp < 0)
-        currkey = fsw_hfs_btree_rec (btree, node, upper);
+			if (cmp < 0)
+				currkey = fsw_hfs_btree_rec (btree, node, upper);
 
-      if (node->kind == kBTIndexNode && currkey != NULL) {
-        currnode = fsw_hfs_btree_next_node_num (currkey);
-      } else {
-        status = FSW_NOT_FOUND;
-        break;
-      }
-    }
+			if (node->kind == kBTIndexNode && currkey != NULL) {
+				currnode = fsw_hfs_btree_next_node_num (currkey);
+			} else {
+				status = FSW_NOT_FOUND;
+				break;
+			}
+		}
 #endif
-  }
+	}
 
-  if (status != FSW_SUCCESS)
-    fsw_free (buffer);
+	if (status != FSW_SUCCESS)
+		fsw_free (buffer);
 
-  return status;
+	return status;
 }
 
 typedef struct {
@@ -838,63 +846,60 @@ fsw_hfs_btree_visit_node (
 
 static fsw_status_t
 fsw_hfs_btree_iterate_node (
-  struct fsw_hfs_btree *btree,
-  BTNodeDescriptor * first_node,
-  fsw_u32 first_rec,
-  int (*callback) (BTreeKey * record,
-                   void *param),
-  void *param
-)
+							struct fsw_hfs_btree *btree,
+							BTNodeDescriptor * first_node,
+							fsw_u32 first_rec,
+							int (*callback) (BTreeKey * record,
+											 void *param),
+							void *param
+							)
 {
-  fsw_status_t status;
+	fsw_status_t status;
 
-  /* We modify node, so make a copy */
-  BTNodeDescriptor *node = first_node;
-  fsw_u8 *buffer = NULL;
+	/* We modify node, so make a copy */
+	BTNodeDescriptor *node = first_node;
+	fsw_u8 *buffer = NULL;
 
-  status = fsw_alloc (btree->btnode_size, &buffer);
-  if (status != FSW_SUCCESS)
-    return status;
+	for (;;) {
+		fsw_u32 i;
+		fsw_u32 count = be16_to_cpu (node->numRecords);
+		fsw_u32 next_node;
 
-  for (;;) {
-    fsw_u32 i;
-    fsw_u32 count = be16_to_cpu (node->numRecords);
-    fsw_u32 next_node;
+		/* Iterate over all records in this node */
+		for (i = first_rec; i < count; i++) {
+			int rv = callback (fsw_hfs_btree_rec (btree, node, i), param);
 
-    /* Iterate over all records in this node */
-    for (i = first_rec; i < count; i++) {
-      int rv = callback (fsw_hfs_btree_rec (btree, node, i), param);
+			switch (rv) {
+				case 1:
+					status = FSW_SUCCESS;
+					goto done;
+				case -1:
+					status = FSW_NOT_FOUND;
+					goto done;
+			}
+			/* if callback returned 0 - continue */
+		}
 
-      switch (rv) {
-      case 1:
-        status = FSW_SUCCESS;
-        goto done;
-      case -1:
-        status = FSW_NOT_FOUND;
-        goto done;
-      }
-      /* if callback returned 0 - continue */
-    }
+		next_node = be32_to_cpu (node->fLink);
 
-    next_node = be32_to_cpu (node->fLink);
+		if (next_node == 0) {
+			status = FSW_NOT_FOUND;
+			break;
+		}
 
-    if (next_node == 0) {
-      status = FSW_NOT_FOUND;
-      break;
-    }
+		status = fsw_hfs_btree_read_node (btree, next_node, &buffer);
+		if (status != FSW_SUCCESS)
+			break;
 
-    status = fsw_hfs_btree_read_node (btree, next_node, buffer);
-    if (status != FSW_SUCCESS)
-      break;
-
-    node = (BTNodeDescriptor *) (void *)buffer;
-    first_rec = 0;
-  }
+		fsw_free (node);
+		node = (BTNodeDescriptor *) (void *)buffer;
+		first_rec = 0;
+	}
 
 done:
-  fsw_free (buffer);
+	fsw_free (buffer);
 
-  return status;
+	return status;
 }
 
 static int
@@ -1252,7 +1257,7 @@ fsw_hfs_dir_read (
 		if (status == FSW_SUCCESS)
 			status = create_hfs_dnode (dno, &param.file_info, child_dno_out);
 	}
-	fsw_free (node);
+
 	fsw_strfree (&rec_name);
 
 	return status;
