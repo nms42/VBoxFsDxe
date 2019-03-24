@@ -938,18 +938,18 @@ fsw_hfs_btree_iterate_node (
 			break;
 		}
 
-		fsw_free(buffer);
 		status = fsw_hfs_btree_read_node (btree, next_node, &buffer);
 
 		if (status != FSW_SUCCESS)
 			break;
 
+		fsw_free(node);
 		node = (BTNodeDescriptor *) buffer;
 		first_rec = 0;
 	}
 
 done:
-	fsw_free (buffer);
+	fsw_free(node);
 
 	return status;
 }
