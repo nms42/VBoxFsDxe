@@ -864,7 +864,7 @@ fsw_efi_dnode_to_FileHandle (
   }
 
   // check type
-  if (dno->dtype != FSW_DNODE_KIND_FILE && dno->dtype != FSW_DNODE_KIND_DIR) {
+  if (dno->dkind != FSW_DNODE_KIND_FILE && dno->dkind != FSW_DNODE_KIND_DIR) {
     Status = EFI_UNSUPPORTED;
     goto Done;
   }
@@ -872,9 +872,9 @@ fsw_efi_dnode_to_FileHandle (
   // allocate file structure
   File = AllocateZeroPool (sizeof (FSW_FILE_DATA));
   File->Signature = FSW_FILE_DATA_SIGNATURE;
-  if (dno->dtype == FSW_DNODE_KIND_FILE)
+  if (dno->dkind == FSW_DNODE_KIND_FILE)
     File->Type = FSW_EFI_FILE_KIND_FILE;
-  else if (dno->dtype == FSW_DNODE_KIND_DIR)
+  else if (dno->dkind == FSW_DNODE_KIND_DIR)
     File->Type = FSW_EFI_FILE_KIND_DIR;
 
   // open shandle
@@ -1256,7 +1256,7 @@ fsw_efi_dnode_fill_FileInfo (
   FileInfo->Size = RequiredSize;
   FileInfo->FileSize = dno->size;
   FileInfo->Attribute = 0;
-  if (dno->dtype == FSW_DNODE_KIND_DIR)
+  if (dno->dkind == FSW_DNODE_KIND_DIR)
     FileInfo->Attribute |= EFI_FILE_DIRECTORY;
 
   // get the missing info from the fs driver

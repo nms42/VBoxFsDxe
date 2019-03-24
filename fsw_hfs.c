@@ -715,7 +715,7 @@ static fsw_status_t
 			while (lower <= upper) {
 				recnum = (lower + upper) / 2;
 
-				currkey = fsw_hfs_btree_rec (btree, node, recnum);
+				currkey = fsw_hfs_btree_rec (btree, buffer, recnum);
 				cmp = compare_keys (currkey, key);
 
 				if (cmp > 0) {
@@ -732,7 +732,7 @@ static fsw_status_t
 			}
 
 			if (cmp < 0)
-				currkey = fsw_hfs_btree_rec (btree, node, upper);
+				currkey = fsw_hfs_btree_rec (btree, buffer, upper);
 
 			if (node->kind == kBTIndexNode && currkey != NULL) {
 				currnode = fsw_hfs_btree_ix_ptr (currkey);

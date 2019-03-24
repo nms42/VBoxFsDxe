@@ -466,7 +466,7 @@ void fsw_dnode_release(struct fsw_dnode *dno)
         vol->dnode_head = dno->next;
 
 #if defined(FSW_DNODE_CACHE_SIZE) && FSW_DNODE_CACHE_SIZE > 0
-    if (dno->dtype == FSW_DNODE_KIND_DIR) {
+    if (dno->dkind == FSW_DNODE_KIND_DIR) {
         int i;
 
         for (i = 0; i < FSW_DNODE_CACHE_SIZE; i++) {
