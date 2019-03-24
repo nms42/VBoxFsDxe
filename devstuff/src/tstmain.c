@@ -83,7 +83,7 @@ id2path(struct fsw_posix_volume *pvol, char *idnum)
 
     path = NULL;
     dnid = (fsw_u32) atol(idnum);
-    status = fsw_dnode_id_fullpath(pvol->vol, dnid, FSW_STRING_TYPE_ISO88591, &path);
+    status = fsw_dnode_id_fullpath(pvol->vol, dnid, FSW_STRING_KIND_ISO88591, &path);
 
     if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_dnode_id_fullpath(%u) returned %d.\n", dnid, status);

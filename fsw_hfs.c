@@ -52,7 +52,7 @@ typedef fsw_u16 btnode_datum_t;
 
 static fsw_status_t fsw_hfs_unistr2string (
 	struct fsw_string* fs,
-	fsw_string_type_t fst,
+	fsw_string_kind_t fskind,
 	HFSUniStr255* us
 );
 
@@ -124,7 +124,7 @@ static BTreeKey *fsw_hfs_btree_rec (
 struct fsw_fstype_table FSW_FSTYPE_TABLE_NAME (
   hfs
 ) = {
-  { FSW_STRING_TYPE_ISO88591, 4, 4, "hfs"},
+  { FSW_STRING_KIND_ISO88591, 4, 4, "hfs"},
   sizeof (struct fsw_hfs_volume),
   sizeof (struct fsw_hfs_dnode),
   fsw_hfs_volume_mount,
@@ -140,15 +140,15 @@ struct fsw_fstype_table FSW_FSTYPE_TABLE_NAME (
 };
 
 static fsw_status_t
-fsw_hfs_unistr2string(struct fsw_string* fs, fsw_string_type_t fst, HFSUniStr255* us)
+fsw_hfs_unistr2string(struct fsw_string* fs, fsw_string_kind_t fskind, HFSUniStr255* us)
 {
 	fsw_u16 uslen;
 	struct fsw_string ws;
 
 	uslen = be16_to_cpu(us->length);
-	fsw_string_setter(&ws, FSW_STRING_TYPE_UTF16_BE, uslen, sizeof(fsw_u16) * uslen, us->unicode);
+	fsw_string_setter(&ws, FSW_STRING_KIND_UTF16_BE, uslen, sizeof(fsw_u16) * uslen, us->unicode);
 
-	return fsw_strdup_coerce(fs, fst, &ws);
+	return fsw_strdup_coerce(fs, fskind, &ws);
 }
 
 static fsw_s32
@@ -301,7 +301,7 @@ fsw_hfs_volume_catalog_setup (
 
 	/* Set default volume name */
 
-	fsw_string_setter (&vol->g.label, FSW_STRING_TYPE_EMPTY, 0, 0, NULL);
+	fsw_string_setter (&vol->g.label, FSW_STRING_KIND_EMPTY, 0, 0, NULL);
 
 	status = fsw_hfs_btree_read_node(&vol->catalog_tree, be32_to_cpu(hr->firstLeafNode), &nd);
 
@@ -315,7 +315,7 @@ fsw_hfs_volume_catalog_setup (
 		btnd = (BTNodeDescriptor *) nd;
 
 		if (btnd->kind == kBTLeafNode && be32_to_cpu (ck->parentID) == kHFSRootParentID) {
-			status = fsw_hfs_unistr2string(&vol->g.label, vol->g.host_string_type, &ck->nodeName);
+			status = fsw_hfs_unistr2string(&vol->g.label, vol->g.host_string_kind, &ck->nodeName);
 		} else
 			status = FSW_VOLUME_CORRUPTED;
 	}
@@ -479,7 +479,7 @@ fsw_hfs_dnode_fill (
 	if (fsw_dnode_is_root(&dno->g))
 		return FSW_SUCCESS;
 
-	if (dno->g.dtype != FSW_DNODE_TYPE_UNKNOWN)
+	if (dno->g.dkind != FSW_DNODE_KIND_UNKNOWN)
 		return FSW_SUCCESS;
 
 	return FSW_NOT_FOUND;
@@ -752,7 +752,7 @@ static fsw_status_t
 
 typedef struct {
   fsw_u32 id;
-  fsw_u32 type;
+  fsw_u32 kind;
   fsw_u32 creator;
   fsw_u32 crtype;
   fsw_u32 ilink;
@@ -785,7 +785,7 @@ fill_fileinfo (
       HFSPlusCatalogFolder *info = (HFSPlusCatalogFolder *) (void *)base;
 
       finfo->id = be32_to_cpu (info->folderID);
-      finfo->type = FSW_DNODE_TYPE_DIR;
+      finfo->kind = FSW_DNODE_KIND_DIR;
 
       /* @todo: return number of elements, maybe use smth else */
 
@@ -808,10 +808,10 @@ fill_fileinfo (
 
       if ((finfo->creator == kSymLinkCreator && finfo->crtype == kSymLinkFileType) ||
           (finfo->creator == kHFSPlusCreator && finfo->crtype == kHardLinkFileType)) {
-        finfo->type = FSW_DNODE_TYPE_SYMLINK;
+        finfo->kind = FSW_DNODE_KIND_SYMLINK;
         finfo->ilink = be32_to_cpu (info->bsdInfo.special.iNodeNum);
       } else {
-        finfo->type = FSW_DNODE_TYPE_FILE;
+        finfo->kind = FSW_DNODE_KIND_FILE;
       }
 
       finfo->size = be64_to_cpu (info->dataFork.logicalSize);
@@ -824,7 +824,7 @@ fill_fileinfo (
       break;
     }
   default:
-    finfo->type = FSW_DNODE_TYPE_UNKNOWN;
+    finfo->kind = FSW_DNODE_KIND_UNKNOWN;
     break;
   }
 }
@@ -880,7 +880,7 @@ fsw_hfs_btree_visit_node (
   file_name->len = name_len;
   fsw_memdup (&file_name->data, &cat_key->nodeName.unicode[0], 2 * name_len);
   file_name->size = 2 * name_len;
-  file_name->stype = FSW_STRING_TYPE_UTF16;
+  file_name->skind = FSW_STRING_KIND_UTF16;
   name_ptr = (fsw_u16 *) file_name->data;
 
   for (i = 0; i < name_len; i++) {
@@ -1121,7 +1121,7 @@ fsw_hfs_get_extent (
   HFSPlusExtentRecord *exts;
   btnode_datum_t *node = NULL;
 
-  extent->extype = FSW_EXTENT_TYPE_PHYSBLOCK;
+  extent->exkind = FSW_EXTENT_KIND_PHYSBLOCK;
   extent->log_count = 1;
   lbno = extent->log_start;
 
@@ -1175,7 +1175,7 @@ create_hfs_dnode (
   fsw_status_t status;
   struct fsw_hfs_dnode *baby;
 
-  status = fsw_dnode_create (dno->g.vol, dno, file_info->id, file_info->type, file_info->name, &baby);
+  status = fsw_dnode_create (dno->g.vol, dno, file_info->id, file_info->kind, file_info->name, &baby);
 
   if (status != FSW_SUCCESS)
     return status;
@@ -1187,13 +1187,13 @@ create_hfs_dnode (
 
   /* Fill-in extents info */
 
-  if (file_info->type == FSW_DNODE_TYPE_FILE) {
+  if (file_info->kind == FSW_DNODE_KIND_FILE) {
     fsw_memcpy (baby->extents, &file_info->extents, sizeof file_info->extents);
   }
 
   /* Fill-in link file info */
 
-  if (file_info->type == FSW_DNODE_TYPE_SYMLINK) {
+  if (file_info->kind == FSW_DNODE_KIND_SYMLINK) {
     baby->creator = file_info->creator;
     baby->crtype = file_info->crtype;
     baby->ilink = file_info->ilink;
@@ -1239,11 +1239,11 @@ fsw_hfs_dir_lookup (
 
 	/* no need to allocate anything */
 
-	if (lookup_name->stype == FSW_STRING_TYPE_UTF16) {
+	if (lookup_name->skind == FSW_STRING_KIND_UTF16) {
 		fsw_memcpy (catkey.nodeName.unicode, lookup_name->data, lookup_name->size);
 		rec_name = *lookup_name;
 	} else {
-		status = fsw_strdup_coerce (&rec_name, FSW_STRING_TYPE_UTF16, lookup_name);
+		status = fsw_strdup_coerce (&rec_name, FSW_STRING_KIND_UTF16, lookup_name);
 		/* nothing allocated so far */
 
 		if (status != FSW_SUCCESS)
@@ -1355,7 +1355,7 @@ fsw_hfs_readlink (
     static fsw_u8 metaprefix[] = "/\0\0\0\0HFS+ Private Data/iNode0123456789";
     fsw_u32 sz = 0;
 
-    link_target->stype = FSW_STRING_TYPE_ISO88591;
+    link_target->skind = FSW_STRING_KIND_ISO88591;
     link_target->size = MPRFSIZE;
     fsw_memdup (&link_target->data, metaprefix, link_target->size);
     sz = (fsw_u32) fsw_snprintf(((char *) link_target->data) + MPRFINUM, 10, "%d", (int)dno->ilink);

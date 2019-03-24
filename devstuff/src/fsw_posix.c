@@ -46,7 +46,7 @@
 
 // function prototypes
 
-fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, fsw_dnode_type_t required_type,
+fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, fsw_dnode_kind_t required_kind,
                                 struct fsw_shandle *shand);
 
 void fsw_posix_change_blocksize(struct fsw_volume *vol,
@@ -59,7 +59,7 @@ fsw_status_t fsw_posix_read_block(struct fsw_volume *vol, fsw_u32 phys_bno, void
  */
 
 struct fsw_host_table   fsw_posix_host_table = {
-    FSW_STRING_TYPE_UTF8,
+    FSW_STRING_KIND_UTF8,
 
     fsw_posix_change_blocksize,
     fsw_posix_read_block
@@ -133,7 +133,7 @@ struct fsw_posix_file * fsw_posix_open(struct fsw_posix_volume *pvol, const char
     file->pvol = pvol;
 
     // open the file
-    status = fsw_posix_open_dno(pvol, path, FSW_DNODE_TYPE_FILE, &file->shand);
+    status = fsw_posix_open_dno(pvol, path, FSW_DNODE_KIND_FILE, &file->shand);
     if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_open: open_dno returned %d\n", status);
         fsw_free(file);
@@ -210,7 +210,7 @@ struct fsw_posix_dir * fsw_posix_opendir(struct fsw_posix_volume *pvol, const ch
     dir->pvol = pvol;
 
     // open the directory
-    status = fsw_posix_open_dno(pvol, path, FSW_DNODE_TYPE_DIR, &dir->shand);
+    status = fsw_posix_open_dno(pvol, path, FSW_DNODE_KIND_DIR, &dir->shand);
     if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_opendir: open_dno returned %d\n", status);
         fsw_free(dir);
@@ -247,14 +247,14 @@ struct dirent * fsw_posix_readdir(struct fsw_posix_dir *dir)
 	// fill dirent structure
 	dent.d_ino = dno->dnode_id;
 
-	switch (dno->dtype) {
-		case FSW_DNODE_TYPE_FILE:
+	switch (dno->dkind) {
+		case FSW_DNODE_KIND_FILE:
 			dent.d_type = DT_REG;
 			break;
-		case FSW_DNODE_TYPE_DIR:
+		case FSW_DNODE_KIND_DIR:
 			dent.d_type = DT_DIR;
 			break;
-		case FSW_DNODE_TYPE_SYMLINK:
+		case FSW_DNODE_KIND_SYMLINK:
 			dent.d_type = DT_LNK;
 			break;
 		default:
@@ -296,7 +296,7 @@ int fsw_posix_closedir(struct fsw_posix_dir *dir)
  * Open a shand of a required type by path.
  */
 
-fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, fsw_dnode_type_t required_type, struct fsw_shandle *shand)
+fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path, fsw_dnode_kind_t required_kind, struct fsw_shandle *shand)
 {
     fsw_status_t        status;
     struct fsw_dnode    *dno;
@@ -305,7 +305,7 @@ fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path,
     int lplen;
 
     lplen = (int)strlen(path);
-    fsw_string_setter(&lookup_path, FSW_STRING_TYPE_ISO88591, lplen, lplen, (void *)path);
+    fsw_string_setter(&lookup_path, FSW_STRING_KIND_ISO88591, lplen, lplen, (void *)path);
 
     // resolve the path (symlinks along the way are automatically resolved)
     status = fsw_dnode_lookup_path(pvol->vol->root, &lookup_path, '/', &dno);
@@ -330,7 +330,7 @@ fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path,
         fsw_dnode_release(dno);
         return status;
     }
-    if (dno->dtype != required_type) {
+    if (dno->dkind != required_kind) {
         fprintf(stderr, "fsw_posix_open_dno: dnode is not of the requested type\n");
         fsw_dnode_release(dno);
         return FSW_UNSUPPORTED;

@@ -91,7 +91,7 @@ fsw_status_t fsw_memdup(void **dest_out, void *src, int len)
 
 int fsw_strlen(struct fsw_string *s)
 {
-    if (s->stype == FSW_STRING_TYPE_EMPTY)
+    if (s->skind == FSW_STRING_KIND_EMPTY)
         return 0;
     return s->len;
 }
@@ -341,14 +341,14 @@ int fsw_streq(struct fsw_string *s1, struct fsw_string *s2)
 {
     struct fsw_string temp_s;
 
-    fsw_string_setter(&temp_s, FSW_STRING_TYPE_ISO88591, 0, 0, NULL);
+    fsw_string_setter(&temp_s, FSW_STRING_KIND_ISO88591, 0, 0, NULL);
 
     // handle empty strings
-    if (s1->stype == FSW_STRING_TYPE_EMPTY) {
+    if (s1->skind == FSW_STRING_KIND_EMPTY) {
         return fsw_streq(&temp_s, s2);
     }
 
-    if (s2->stype == FSW_STRING_TYPE_EMPTY) {
+    if (s2->skind == FSW_STRING_KIND_EMPTY) {
         return fsw_streq(s1, &temp_s);
     }
 
@@ -359,19 +359,21 @@ int fsw_streq(struct fsw_string *s1, struct fsw_string *s2)
     if (s1->len == 0)   // both strings are empty
         return 1;
 
-    if (s1->stype == s2->stype) {
-        // same type, do a dumb memory compare
+    if (s1->skind == s2->skind) {
+        // same kind, do a dumb memory compare
         if (s1->size != s2->size)
             return 0;
         return fsw_memeq(s1->data, s2->data, s1->size);
     }
 
-    // dispatch to type-specific functions
-    #define STREQ_DISPATCH(type1, type2) \
-      if (s1->stype == FSW_STRING_TYPE_##type1 && s2->stype == FSW_STRING_TYPE_##type2) \
-        return fsw_streq_##type1##_##type2(s1->data, s2->data, s1->len); \
-      if (s2->stype == FSW_STRING_TYPE_##type1 && s1->stype == FSW_STRING_TYPE_##type2) \
-        return fsw_streq_##type1##_##type2(s2->data, s1->data, s1->len);
+    // dispatch to kind-specific functions
+    //
+    #define STREQ_DISPATCH(kind1, kind2) \
+      if (s1->skind == FSW_STRING_KIND_##kind1 && s2->skind == FSW_STRING_KIND_##kind2) \
+        return fsw_streq_##kind1##_##kind2(s1->data, s2->data, s1->len); \
+      if (s2->skind == FSW_STRING_KIND_##kind1 && s1->skind == FSW_STRING_KIND_##kind2) \
+        return fsw_streq_##kind1##_##kind2(s2->data, s1->data, s1->len);
+
     STREQ_DISPATCH(ISO88591, UTF8);
     STREQ_DISPATCH(ISO88591, UTF16);
     STREQ_DISPATCH(ISO88591, UTF16_SWAPPED);
@@ -398,7 +400,7 @@ int fsw_streq_cstr(struct fsw_string *s1, const char *s2)
     for (i = 0; s2[i]; i++)
         ;
 
-    fsw_string_setter(&temp_s, FSW_STRING_TYPE_ISO88591, i, i, (void *)s2);
+    fsw_string_setter(&temp_s, FSW_STRING_KIND_ISO88591, i, i, (void *)s2);
 
     return fsw_streq(s1, &temp_s);
 }
@@ -407,9 +409,9 @@ int fsw_streq_cstr(struct fsw_string *s1, const char *s2)
  * Init string
  */
 
-void fsw_string_setter(struct fsw_string *dest, fsw_string_type_t stype, int len, int size, void *data)
+void fsw_string_setter(struct fsw_string *dest, fsw_string_kind_t skind, int len, int size, void *data)
 {
-    dest->stype = stype;
+    dest->skind = skind;
     dest->len = len;
     dest->size = size;
     dest->data = data;
@@ -421,17 +423,17 @@ void fsw_string_setter(struct fsw_string *dest, fsw_string_type_t stype, int len
  * fsw_string_mkempty.
  */
 
-fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, fsw_string_type_t type, struct fsw_string *src)
+fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, fsw_string_kind_t kind, struct fsw_string *src)
 {
     fsw_status_t    status;
 
-    if (src->stype == FSW_STRING_TYPE_EMPTY || src->len == 0) {
-        fsw_string_setter(dest, type, 0, 0, NULL);
+    if (src->skind == FSW_STRING_KIND_EMPTY || src->len == 0) {
+        fsw_string_setter(dest, kind, 0, 0, NULL);
         return FSW_SUCCESS;
     }
 
-    if (src->stype == type) {
-        fsw_string_setter(dest, type, src->len, src->size, NULL);
+    if (src->skind == kind) {
+        fsw_string_setter(dest, kind, src->len, src->size, NULL);
         status = fsw_alloc(dest->size, &dest->data);
         if (status != FSW_SUCCESS)
             return status;
@@ -440,10 +442,12 @@ fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, fsw_string_type_t type, 
         return FSW_SUCCESS;
     }
 
-    // dispatch to type-specific functions
-    #define STRCOERCE_DISPATCH(type1, type2) \
-      if (src->stype == FSW_STRING_TYPE_##type1 && type == FSW_STRING_TYPE_##type2) \
-        return fsw_strcoerce_##type1##_##type2(src->data, src->len, dest);
+    // dispatch to kind-specific functions
+
+    #define STRCOERCE_DISPATCH(kind1, kind2) \
+      if (src->skind == FSW_STRING_KIND_##kind1 && kind == FSW_STRING_KIND_##kind2) \
+        return fsw_strcoerce_##kind1##_##kind2(src->data, src->len, dest);
+
     STRCOERCE_DISPATCH(UTF8, ISO88591);
     STRCOERCE_DISPATCH(UTF16, ISO88591);
     STRCOERCE_DISPATCH(UTF16_SWAPPED, ISO88591);
@@ -477,15 +481,15 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
 {
     int i, maxlen;
 
-    if (buffer->stype == FSW_STRING_TYPE_EMPTY || buffer->len == 0) {
-        element->stype = FSW_STRING_TYPE_EMPTY;
+    if (buffer->skind == FSW_STRING_KIND_EMPTY || buffer->len == 0) {
+        element->skind = FSW_STRING_KIND_EMPTY;
         return;
     }
 
     maxlen = buffer->len;
     *element = *buffer;
 
-    if (buffer->stype == FSW_STRING_TYPE_ISO88591) {
+    if (buffer->skind == FSW_STRING_KIND_ISO88591) {
         fsw_u8 *p;
 
         p = (fsw_u8 *)element->data;
@@ -505,7 +509,7 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
         element->size = element->len;
         buffer->size  = buffer->len;
 
-    } else if (buffer->stype == FSW_STRING_TYPE_UTF16) {
+    } else if (buffer->skind == FSW_STRING_KIND_UTF16) {
         fsw_u16 *p;
 
         p = (fsw_u16 *)element->data;
@@ -527,7 +531,7 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
 
     } else {
         // fallback
-        buffer->stype = FSW_STRING_TYPE_EMPTY;
+        buffer->skind = FSW_STRING_KIND_EMPTY;
     }
 
     // TODO: support UTF8 and UTF16_SWAPPED
@@ -539,10 +543,10 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
 
 void fsw_string_mkempty(struct fsw_string *s)
 {
-    if (s->stype != FSW_STRING_TYPE_EMPTY && s->data != NULL)
+    if (s->skind != FSW_STRING_KIND_EMPTY && s->data != NULL)
         fsw_free(s->data);
 
-    fsw_string_setter(s, FSW_STRING_TYPE_EMPTY, 0, 0, NULL);
+    fsw_string_setter(s, FSW_STRING_KIND_EMPTY, 0, 0, NULL);
 }
 
 /**

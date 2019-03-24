@@ -135,23 +135,23 @@ typedef enum {
 
 
 /**
- * Possible string types / encodings. In the case of FSW_STRING_TYPE_EMPTY,
+ * Possible string types / encodings. In the case of FSW_STRING_KIND_EMPTY,
  * all other members of the fsw_string structure may be invalid.
  */
 typedef enum {
-    FSW_STRING_TYPE_EMPTY,
-    FSW_STRING_TYPE_ISO88591,
-    FSW_STRING_TYPE_UTF8,
-    FSW_STRING_TYPE_UTF16,
-    FSW_STRING_TYPE_UTF16_SWAPPED
-} fsw_string_type_t;
+    FSW_STRING_KIND_EMPTY,
+    FSW_STRING_KIND_ISO88591,
+    FSW_STRING_KIND_UTF8,
+    FSW_STRING_KIND_UTF16,
+    FSW_STRING_KIND_UTF16_SWAPPED
+} fsw_string_kind_t;
 
 #ifdef FSW_LITTLE_ENDIAN
-#define FSW_STRING_TYPE_UTF16_LE FSW_STRING_TYPE_UTF16
-#define FSW_STRING_TYPE_UTF16_BE FSW_STRING_TYPE_UTF16_SWAPPED
+#define FSW_STRING_KIND_UTF16_LE FSW_STRING_KIND_UTF16
+#define FSW_STRING_KIND_UTF16_BE FSW_STRING_KIND_UTF16_SWAPPED
 #else
-#define FSW_STRING_TYPE_UTF16_LE FSW_STRING_TYPE_UTF16_SWAPPED
-#define FSW_STRING_TYPE_UTF16_BE FSW_STRING_TYPE_UTF16
+#define FSW_STRING_KIND_UTF16_LE FSW_STRING_KIND_UTF16_SWAPPED
+#define FSW_STRING_KIND_UTF16_BE FSW_STRING_KIND_UTF16
 #endif
 
 /**
@@ -159,7 +159,7 @@ typedef enum {
  */
 
 struct fsw_string {
-    fsw_string_type_t stype;             //!< Encoding of the string - empty, ISO-8859-1, UTF8, UTF16
+    fsw_string_kind_t skind;        //!< Encoding of the string - empty, ISO-8859-1, UTF8, UTF16
     int         len;                //!< Length in characters
     int         size;               //!< Total data size in bytes
     void        *data;              //!< Data pointer (may be NULL if type is EMPTY or len is zero)
@@ -167,7 +167,7 @@ struct fsw_string {
 
 /** Static initializer for an empty string. */
 
-#define FSW_STRING_INIT { FSW_STRING_TYPE_EMPTY, 0, 0, NULL }
+#define FSW_STRING_INIT { FSW_STRING_KIND_EMPTY, 0, 0, NULL }
 
 /* Rudimentary list of strings */
 
@@ -208,20 +208,20 @@ struct fsw_volume {
     void        *host_data;         //!< Hook for a host-specific data structure
     struct fsw_host_table *host_table;      //!< Dispatch table for host-specific functions
     struct fsw_fstype_table *fstype_table;  //!< Dispatch table for file system specific functions
-    fsw_string_type_t host_string_type;   //!< String type used by the host environment
+    fsw_string_kind_t host_string_kind;   //!< String type used by the host environment
 };
 
 /**
- * Possible dnode types. FSW_DNODE_TYPE_UNKNOWN may only be used before
+ * Possible dnode types. FSW_DNODE_KIND_UNKNOWN may only be used before
  * fsw_dnode_fill has been called on the dnode.
  */
 typedef enum {
-    FSW_DNODE_TYPE_UNKNOWN,
-    FSW_DNODE_TYPE_FILE,
-    FSW_DNODE_TYPE_DIR,
-    FSW_DNODE_TYPE_SYMLINK,
-    FSW_DNODE_TYPE_SPECIAL
-} fsw_dnode_type_t;
+    FSW_DNODE_KIND_UNKNOWN,
+    FSW_DNODE_KIND_FILE,
+    FSW_DNODE_KIND_DIR,
+    FSW_DNODE_KIND_SYMLINK,
+    FSW_DNODE_KIND_SPECIAL
+} fsw_dnode_kind_t;
 
 /**
  * Core: Represents a "directory node" - a file, directory, symlink, whatever.
@@ -236,7 +236,7 @@ struct fsw_dnode {
 
     fsw_u32     dnode_id;           //!< Unique id number (usually the inode number)
     fsw_u32     parent_id;          //!< Unique id number (usually the inode number)
-    fsw_dnode_type_t dtype;         //!< Type of the dnode - file, dir, symlink, special
+    fsw_dnode_kind_t dkind;         //!< Type of the dnode - file, dir, symlink, special
     fsw_u64     size;               //!< Data size in bytes
 
     struct fsw_dnode *next;         //!< Doubly-linked list of all dnodes: previous dnode
@@ -249,26 +249,26 @@ struct fsw_dnode {
 };
 
 /**
- * Possible extent representation types. FSW_EXTENT_TYPE_INVALID is for shandle's
+ * Possible extent representation types. FSW_EXTENT_KIND_INVALID is for shandle's
  * internal use only, it must not be returned from a get_extent function.
  */
 typedef enum {
-    FSW_EXTENT_TYPE_INVALID,
-    FSW_EXTENT_TYPE_SPARSE,
-    FSW_EXTENT_TYPE_PHYSBLOCK,
-    FSW_EXTENT_TYPE_BUFFER
-} fsw_extent_type_t;
+    FSW_EXTENT_KIND_INVALID,
+    FSW_EXTENT_KIND_SPARSE,
+    FSW_EXTENT_KIND_PHYSBLOCK,
+    FSW_EXTENT_KIND_BUFFER
+} fsw_extent_kind_t;
 
 /**
  * Core: Stores the mapping of a region of a file to the data on disk.
  */
 
 struct fsw_extent {
-    fsw_extent_type_t extype;       //!< Type of extent specification
+    fsw_extent_kind_t exkind;       //!< Type of extent specification
     fsw_u32     log_start;          //!< Starting logical block number
     fsw_u32     log_count;          //!< Logical block count
-    fsw_u32     phys_start;         //!< Starting physical block number (for FSW_EXTENT_TYPE_PHYSBLOCK only)
-    void        *buffer;            //!< Allocated buffer pointer (for FSW_EXTENT_TYPE_BUFFER only)
+    fsw_u32     phys_start;         //!< Starting physical block number (for FSW_EXTENT_KIND_PHYSBLOCK only)
+    void        *buffer;            //!< Allocated buffer pointer (for FSW_EXTENT_KIND_BUFFER only)
 };
 
 /**
@@ -318,7 +318,7 @@ enum {
 
 struct fsw_host_table
 {
-    fsw_string_type_t native_string_type; //!< String type used by the host environment
+    fsw_string_kind_t native_string_kind; //!< String type used by the host environment
 
     void         (*change_blocksize)(struct fsw_volume *vol,
                                      fsw_u32 old_phys_blocksize, fsw_u32 old_log_blocksize,
@@ -381,7 +381,7 @@ void         fsw_block_release(struct VOLSTRUCTNAME *vol, fsw_u32 phys_bno, void
 /*@{*/
 
 fsw_status_t fsw_dnode_create_root(struct VOLSTRUCTNAME *vol, fsw_u32 dnode_id, struct DNODESTRUCTNAME **dno_out);
-fsw_status_t fsw_dnode_create(struct VOLSTRUCTNAME *vol, struct DNODESTRUCTNAME *parent_dno, fsw_u32 dnode_id, int type,
+fsw_status_t fsw_dnode_create(struct VOLSTRUCTNAME *vol, struct DNODESTRUCTNAME *parent_dno, fsw_u32 dnode_id, fsw_dnode_kind_t kind,
                               struct fsw_string *name, struct DNODESTRUCTNAME **dno_out);
 int          fsw_dnode_is_root(struct fsw_dnode *dno);
 
@@ -440,8 +440,8 @@ fsw_status_t fsw_memdup(void **dest_out, void *src, int len);
 int          fsw_strlen(struct fsw_string *s);
 int          fsw_streq(struct fsw_string *s1, struct fsw_string *s2);
 int          fsw_streq_cstr(struct fsw_string *s1, const char *s2);
-void         fsw_string_setter(struct fsw_string *dest, fsw_string_type_t stype, int len, int size, void *data);
-fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, fsw_string_type_t type, struct fsw_string *src);
+void         fsw_string_setter(struct fsw_string *dest, fsw_string_kind_t skind, int len, int size, void *data);
+fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, fsw_string_kind_t kind, struct fsw_string *src);
 void         fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char separator);
 
 void         fsw_string_mkempty(struct fsw_string *s);

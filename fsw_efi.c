@@ -218,7 +218,7 @@ EFI_LOCK fsw_efi_Lock = EFI_INITIALIZE_LOCK_VARIABLE (TPL_CALLBACK);
  */
 
 struct fsw_host_table fsw_efi_host_table = {
-  FSW_STRING_TYPE_UTF16,
+  FSW_STRING_KIND_UTF16,
 
   fsw_efi_change_blocksize,
   fsw_efi_read_block
@@ -638,7 +638,7 @@ fsw_efi_FileHandle_Open (
   Status = EFI_UNSUPPORTED;
   File = FSW_FILE_FROM_FILE_HANDLE (This);
 
-  if (File->Type == FSW_EFI_FILE_TYPE_DIR)
+  if (File->Type == FSW_EFI_FILE_KIND_DIR)
     Status = fsw_efi_dir_open (File, NewHandle, FileName, OpenMode, Attributes);
 
   // not supported for regular files
@@ -706,9 +706,9 @@ fsw_efi_FileHandle_Read (
   Status = EFI_UNSUPPORTED;
   File = FSW_FILE_FROM_FILE_HANDLE (This);
 
-  if (File->Type == FSW_EFI_FILE_TYPE_FILE)
+  if (File->Type == FSW_EFI_FILE_KIND_FILE)
     Status = fsw_efi_file_read (File, BufferSize, Buffer);
-  else if (File->Type == FSW_EFI_FILE_TYPE_DIR)
+  else if (File->Type == FSW_EFI_FILE_KIND_DIR)
     Status = fsw_efi_dir_read (File, BufferSize, Buffer);
 
   return Status;
@@ -750,7 +750,7 @@ fsw_efi_FileHandle_GetPosition (
   Status = EFI_UNSUPPORTED;
   File = FSW_FILE_FROM_FILE_HANDLE (This);
 
-  if (File->Type == FSW_EFI_FILE_TYPE_FILE)
+  if (File->Type == FSW_EFI_FILE_KIND_FILE)
     Status = fsw_efi_file_getpos (File, Position);
   // not defined for directories
 
@@ -774,9 +774,9 @@ fsw_efi_FileHandle_SetPosition (
   Status = EFI_UNSUPPORTED;
   File = FSW_FILE_FROM_FILE_HANDLE (This);
 
-  if (File->Type == FSW_EFI_FILE_TYPE_FILE)
+  if (File->Type == FSW_EFI_FILE_KIND_FILE)
     Status = fsw_efi_file_setpos (File, Position);
-  else if (File->Type == FSW_EFI_FILE_TYPE_DIR)
+  else if (File->Type == FSW_EFI_FILE_KIND_DIR)
     Status = fsw_efi_dir_setpos (File, Position);
 
   return Status;
@@ -864,7 +864,7 @@ fsw_efi_dnode_to_FileHandle (
   }
 
   // check type
-  if (dno->dtype != FSW_DNODE_TYPE_FILE && dno->dtype != FSW_DNODE_TYPE_DIR) {
+  if (dno->dtype != FSW_DNODE_KIND_FILE && dno->dtype != FSW_DNODE_KIND_DIR) {
     Status = EFI_UNSUPPORTED;
     goto Done;
   }
@@ -872,10 +872,10 @@ fsw_efi_dnode_to_FileHandle (
   // allocate file structure
   File = AllocateZeroPool (sizeof (FSW_FILE_DATA));
   File->Signature = FSW_FILE_DATA_SIGNATURE;
-  if (dno->dtype == FSW_DNODE_TYPE_FILE)
-    File->Type = FSW_EFI_FILE_TYPE_FILE;
-  else if (dno->dtype == FSW_DNODE_TYPE_DIR)
-    File->Type = FSW_EFI_FILE_TYPE_DIR;
+  if (dno->dtype == FSW_DNODE_KIND_FILE)
+    File->Type = FSW_EFI_FILE_KIND_FILE;
+  else if (dno->dtype == FSW_DNODE_KIND_DIR)
+    File->Type = FSW_EFI_FILE_KIND_DIR;
 
   // open shandle
   Status =
@@ -990,7 +990,7 @@ fsw_efi_dir_open (
     return EFI_WRITE_PROTECTED;
 
   lplen = (int) StrLen (FileName);
-  fsw_string_setter(&lookup_path, FSW_STRING_TYPE_UTF16, lplen, lplen * sizeof(fsw_u16), FileName);
+  fsw_string_setter(&lookup_path, FSW_STRING_KIND_UTF16, lplen, lplen * sizeof(fsw_u16), FileName);
 
   // resolve the path (symlinks along the way are automatically resolved)
   Status =
@@ -1256,7 +1256,7 @@ fsw_efi_dnode_fill_FileInfo (
   FileInfo->Size = RequiredSize;
   FileInfo->FileSize = dno->size;
   FileInfo->Attribute = 0;
-  if (dno->dtype == FSW_DNODE_TYPE_DIR)
+  if (dno->dtype == FSW_DNODE_KIND_DIR)
     FileInfo->Attribute |= EFI_FILE_DIRECTORY;
 
   // get the missing info from the fs driver

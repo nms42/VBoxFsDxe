@@ -93,9 +93,9 @@ typedef struct {
 } FSW_FILE_DATA;
 
 /** File type: regular file. */
-#define FSW_EFI_FILE_TYPE_FILE  (0)
+#define FSW_EFI_FILE_KIND_FILE  (0)
 /** File type: directory. */
-#define FSW_EFI_FILE_TYPE_DIR   (1)
+#define FSW_EFI_FILE_KIND_DIR   (1)
 
 /** Signature for the file handle structure. */
 #define FSW_FILE_DATA_SIGNATURE    EFI_SIGNATURE_32 ('f', 's', 'w', 'F')

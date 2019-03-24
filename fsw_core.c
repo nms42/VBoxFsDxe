@@ -78,11 +78,11 @@ fsw_status_t fsw_mount(void *host_data,
     // initialize fields
     vol->phys_blocksize = 512;
     vol->log_blocksize  = 512;
-    vol->label.stype     = FSW_STRING_TYPE_EMPTY;
+    vol->label.skind     = FSW_STRING_KIND_EMPTY;
     vol->host_data      = host_data;
     vol->host_table     = host_table;
     vol->fstype_table   = fstype_table;
-    vol->host_string_type = host_table->native_string_type;
+    vol->host_string_kind = host_table->native_string_kind;
 
     // let the fs driver mount the file system
     status = vol->fstype_table->volume_mount(vol);
@@ -332,7 +332,7 @@ static struct fsw_dnode *fsw_vol_lookup_dnode_id(struct fsw_volume *vol, fsw_u32
  * is created. Instead, the existing dnode is returned and its reference count
  * increased. All other parameters are ignored in this case.
  *
- * The type passed into this function may be FSW_DNODE_TYPE_UNKNOWN. It is sufficient
+ * The type passed into this function may be FSW_DNODE_KIND_UNKNOWN. It is sufficient
  * to fill the type field during the dnode_fill call.
  *
  * The name parameter must describe a string with the object's name. A copy will be
@@ -343,7 +343,7 @@ static struct fsw_dnode *fsw_vol_lookup_dnode_id(struct fsw_volume *vol, fsw_u32
  * that must be released by the caller with fsw_dnode_release.
  */
 
-fsw_status_t fsw_dnode_create(struct fsw_volume *vol, struct fsw_dnode *parent_dno, fsw_u32 dnode_id, int type,
+fsw_status_t fsw_dnode_create(struct fsw_volume *vol, struct fsw_dnode *parent_dno, fsw_u32 dnode_id, fsw_dnode_kind_t kind,
                               struct fsw_string *name, struct fsw_dnode **dno_out)
 {
     fsw_status_t    status;
@@ -372,11 +372,11 @@ fsw_status_t fsw_dnode_create(struct fsw_volume *vol, struct fsw_dnode *parent_d
     }
 
     dno->dnode_id = dnode_id;
-    dno->dtype = type;
+    dno->dkind = kind;
     dno->refcount = 1;
 
     if (name != NULL) {
-        status = fsw_strdup_coerce(&dno->name, vol->host_table->native_string_type, name);
+        status = fsw_strdup_coerce(&dno->name, vol->host_table->native_string_kind, name);
         if (status != FSW_SUCCESS) {
             fsw_free(dno);
             return status;
@@ -401,7 +401,7 @@ fsw_status_t fsw_dnode_create_root(struct fsw_volume *vol, fsw_u32 dnode_id, str
     fsw_status_t    status;
     struct fsw_dnode *dno;
 
-    status = fsw_dnode_create(vol, NULL, dnode_id, FSW_DNODE_TYPE_DIR, NULL, &dno);
+    status = fsw_dnode_create(vol, NULL, dnode_id, FSW_DNODE_KIND_DIR, NULL, &dno);
     if (status == FSW_SUCCESS) {
         dno->parent_id = dnode_id;
         *dno_out = dno;
@@ -412,7 +412,7 @@ fsw_status_t fsw_dnode_create_root(struct fsw_volume *vol, fsw_u32 dnode_id, str
 int fsw_dnode_is_root(struct fsw_dnode *dno)
 {
   if (dno->parent == NULL &&
-      dno->dtype == FSW_DNODE_TYPE_DIR &&
+      dno->dkind == FSW_DNODE_KIND_DIR &&
       dno->dnode_id == dno->parent_id &&
       fsw_strlen(&dno->name) == 0) {
     return 1;
@@ -466,7 +466,7 @@ void fsw_dnode_release(struct fsw_dnode *dno)
         vol->dnode_head = dno->next;
 
 #if defined(FSW_DNODE_CACHE_SIZE) && FSW_DNODE_CACHE_SIZE > 0
-    if (dno->dtype == FSW_DNODE_TYPE_DIR) {
+    if (dno->dtype == FSW_DNODE_KIND_DIR) {
         int i;
 
         for (i = 0; i < FSW_DNODE_CACHE_SIZE; i++) {
@@ -579,7 +579,7 @@ fsw_status_t fsw_dnode_lookup_cache(struct fsw_dnode *dno,
         goto errorexit;
 
     // make sure we operate on a directory
-    if (dno->dtype != FSW_DNODE_TYPE_DIR) {
+    if (dno->dkind != FSW_DNODE_KIND_DIR) {
         status = FSW_UNSUPPORTED;
         goto errorexit;
     }
@@ -669,7 +669,7 @@ fsw_status_t fsw_dnode_lookup(struct fsw_dnode *dno,
         goto errorexit;
 
     // resolve symlink if necessary
-    if (dno->dtype == FSW_DNODE_TYPE_SYMLINK) {
+    if (dno->dkind == FSW_DNODE_KIND_SYMLINK) {
         status = fsw_dnode_resolve(dno, &child_dno);
         if (status != FSW_SUCCESS)
             goto errorexit;
@@ -686,7 +686,7 @@ fsw_status_t fsw_dnode_lookup(struct fsw_dnode *dno,
     }
 
     // make sure we operate on a directory
-    if (dno->dtype != FSW_DNODE_TYPE_DIR) {
+    if (dno->dkind != FSW_DNODE_KIND_DIR) {
         status = FSW_UNSUPPORTED;
         goto errorexit;
     }
@@ -800,7 +800,7 @@ fsw_status_t fsw_dnode_dir_read(struct fsw_shandle *shand, struct fsw_dnode **ch
     struct fsw_dnode *dno = shand->dnode;
     fsw_u64         saved_pos;
 
-    if (dno->dtype != FSW_DNODE_TYPE_DIR)
+    if (dno->dkind != FSW_DNODE_KIND_DIR)
         return FSW_UNSUPPORTED;
 
     saved_pos = shand->pos;
@@ -827,7 +827,7 @@ fsw_status_t fsw_dnode_readlink(struct fsw_dnode *dno, struct fsw_string *target
     status = fsw_dnode_fill(dno);
     if (status != FSW_SUCCESS)
         return status;
-    if (dno->dtype != FSW_DNODE_TYPE_SYMLINK)
+    if (dno->dkind != FSW_DNODE_KIND_SYMLINK)
         return FSW_UNSUPPORTED;
 
     return dno->vol->fstype_table->readlink(dno->vol, dno, target_name);
@@ -838,7 +838,7 @@ fsw_status_t fsw_dnode_readlink(struct fsw_dnode *dno, struct fsw_string *target
  * be called by the file system driver if the file system stores the target path
  * as normal file data. This function will open an shandle, read the whole content
  * of the file into a buffer, and build a string from that. Currently the encoding
- * for the string is fixed as FSW_STRING_TYPE_ISO88591.
+ * for the string is fixed as FSW_STRING_KIND_ISO88591.
  *
  * If the function returns FSW_SUCCESS, the string handle provided by the caller is
  * filled with a string in the host's preferred encoding. The caller is responsible
@@ -868,8 +868,8 @@ fsw_status_t fsw_dnode_readlink_data(struct fsw_dnode *dno, struct fsw_string *l
 
 	    if (status == FSW_SUCCESS) {
 		    // TODO: link datum type?
-		    fsw_string_setter(&s, FSW_STRING_TYPE_ISO88591, buffer_size, buffer_size, buffer);
-		    status = fsw_strdup_coerce(link_target, dno->vol->host_string_type, &s);
+		    fsw_string_setter(&s, FSW_STRING_KIND_ISO88591, buffer_size, buffer_size, buffer);
+		    status = fsw_strdup_coerce(link_target, dno->vol->host_string_kind, &s);
 	    }
     }
     return status;
@@ -901,7 +901,7 @@ fsw_status_t fsw_dnode_resolve(struct fsw_dnode *dno, struct fsw_dnode **target_
         status = fsw_dnode_fill(dno);
         if (status != FSW_SUCCESS)
             goto errorexit;
-        if (dno->dtype != FSW_DNODE_TYPE_SYMLINK) {
+        if (dno->dkind != FSW_DNODE_KIND_SYMLINK) {
             // found a non-symlink target, return it
             *target_dno_out = dno;
             return FSW_SUCCESS;
@@ -960,7 +960,7 @@ fsw_status_t fsw_shandle_open(struct fsw_dnode *dno, struct fsw_shandle *shand)
 
 		shand->dnode = dno;
 		shand->pos = 0;
-		shand->extent.extype = FSW_EXTENT_TYPE_INVALID;
+		shand->extent.exkind = FSW_EXTENT_KIND_INVALID;
 	}
 
 	return status;
@@ -975,7 +975,7 @@ fsw_status_t fsw_shandle_open(struct fsw_dnode *dno, struct fsw_shandle *shand)
 
 void fsw_shandle_close(struct fsw_shandle *shand)
 {
-    if (shand->extent.extype == FSW_EXTENT_TYPE_BUFFER)
+    if (shand->extent.exkind == FSW_EXTENT_KIND_BUFFER)
         fsw_free(shand->extent.buffer);
     fsw_dnode_release(shand->dnode);
 }
@@ -1004,7 +1004,7 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
     buffer = buffer_in;
     buflen = *buffer_size_inout;
     pos = (fsw_u32)shand->pos;
-    cache_level = (dno->dtype != FSW_DNODE_TYPE_FILE) ? 1 : 0;
+    cache_level = (dno->dkind != FSW_DNODE_KIND_FILE) ? 1 : 0;
     // restrict read to file size
     if (buflen > dno->size - pos)
         buflen = (fsw_u32)(dno->size - pos);
@@ -1012,18 +1012,18 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
     while (buflen > 0) {
         // get extent for the current logical block
         log_bno = pos / vol->log_blocksize;
-        if (shand->extent.extype == FSW_EXTENT_TYPE_INVALID ||
+        if (shand->extent.exkind == FSW_EXTENT_KIND_INVALID ||
             log_bno < shand->extent.log_start ||
             log_bno >= shand->extent.log_start + shand->extent.log_count) {
 
-            if (shand->extent.extype == FSW_EXTENT_TYPE_BUFFER)
+            if (shand->extent.exkind == FSW_EXTENT_KIND_BUFFER)
                 fsw_free(shand->extent.buffer);
 
             // ask the file system for the proper extent
             shand->extent.log_start = log_bno;
             status = vol->fstype_table->get_extent(vol, dno, &shand->extent);
             if (status != FSW_SUCCESS) {
-                shand->extent.extype = FSW_EXTENT_TYPE_INVALID;
+                shand->extent.exkind = FSW_EXTENT_KIND_INVALID;
                 return status;
             }
         }
@@ -1031,7 +1031,7 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
         pos_in_extent = pos - shand->extent.log_start * vol->log_blocksize;
 
         // dispatch by extent type
-        if (shand->extent.extype == FSW_EXTENT_TYPE_PHYSBLOCK) {
+        if (shand->extent.exkind == FSW_EXTENT_KIND_PHYSBLOCK) {
             // convert to physical block number and offset
             phys_bno = shand->extent.phys_start + pos_in_extent / vol->phys_blocksize;
             pos_in_physblock = pos_in_extent & (vol->phys_blocksize - 1);
@@ -1048,7 +1048,7 @@ fsw_status_t fsw_shandle_read(struct fsw_shandle *shand, fsw_u32 *buffer_size_in
             fsw_memcpy(buffer, block_buffer + pos_in_physblock, copylen);
             fsw_block_release(vol, phys_bno, block_buffer);
 
-        } else if (shand->extent.extype == FSW_EXTENT_TYPE_BUFFER) {
+        } else if (shand->extent.exkind == FSW_EXTENT_KIND_BUFFER) {
             copylen = shand->extent.log_count * vol->log_blocksize - pos_in_extent;
             if (copylen > buflen)
                 copylen = buflen;
@@ -1085,7 +1085,7 @@ fsw_status_t fsw_dnode_id_lookup(struct VOLSTRUCTNAME *vol, fsw_u32 dnid, struct
     return FSW_SUCCESS;
   }
 
-  status = fsw_dnode_create(vol, NULL, dnid, FSW_DNODE_TYPE_UNKNOWN, NULL, &dn);
+  status = fsw_dnode_create(vol, NULL, dnid, FSW_DNODE_KIND_UNKNOWN, NULL, &dn);
 
   if (status != FSW_SUCCESS)
     return status;
