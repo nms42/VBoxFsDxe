@@ -246,7 +246,7 @@ struct dirent * fsw_posix_readdir(struct fsw_posix_dir *dir)
   
   // fill dirent structure
   dent.d_fileno = dno->dnode_id;
-  dent.d_reclen = 8 + dno->name.size + 1;
+  dent.d_reclen = ((char *)&dent.d_name - (char *)&dent.d_ino) + dno->name.size + 1;
   switch (dno->dtype) {
     case FSW_DNODE_TYPE_FILE:
       dent.d_type = DT_REG;
