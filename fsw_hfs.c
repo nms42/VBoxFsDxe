@@ -422,7 +422,7 @@ fsw_hfs_volume_free (
   struct fsw_hfs_volume *vol
 )
 {
-  if (vol->primary_voldesc) {
+  if (vol->primary_voldesc != NULL) {
     fsw_free (vol->primary_voldesc);
     vol->primary_voldesc = NULL;
   }
@@ -770,8 +770,6 @@ fill_fileinfo (
 {
   fsw_u8* base;
   fsw_u16 rec_type;
-
-  /* for plain HFS "-(keySize & 1)" would be needed */
 
   base = (fsw_u8 *) key + be16_to_cpu (key->keyLength) + 2;
   rec_type = be16_to_cpu (*(fsw_u16 *) base);
