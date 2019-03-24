@@ -102,15 +102,6 @@ struct fsw_hfs_key
 
 #pragma pack(pop)
 
-typedef enum {
-    /* Regular HFS */
-    FSW_HFS_PLAIN = 0,
-    /* HFS+ */
-    FSW_HFS_PLUS,
-    /* HFS+ embedded to HFS */
-    FSW_HFS_PLUS_EMB
-} fsw_hfs_kind;
-
 /**
  * HFS: Dnode structure with HFS-specific data.
  */
@@ -154,8 +145,6 @@ struct fsw_hfs_volume
     struct fsw_hfs_dnode          root_file;
     int                           case_sensitive;
     fsw_u32                       block_size_shift;
-    fsw_hfs_kind                  hfs_kind;
-    fsw_u32                       emb_block_off;
 };
 
 /* Endianess swappers */

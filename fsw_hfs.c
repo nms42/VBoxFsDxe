@@ -288,7 +288,7 @@ fsw_hfs_volume_catalog_setup (
 	hr = fsw_hfs_btree_read_hdrec(&vol->catalog_tree);
 
 	if (hr != NULL) {
-		vol->case_sensitive = (vol->hfs_kind == FSW_HFS_PLUS) && (hr->keyCompareType == kHFSBinaryCompare);
+		vol->case_sensitive = (hr->keyCompareType == kHFSBinaryCompare);
 	} else {
 		return FSW_VOLUME_CORRUPTED;
 	}
@@ -335,16 +335,11 @@ fsw_hfs_volume_mount (
 	HFSPlusVolumeHeader *voldesc;
 	fsw_u32 blockno;
 
-	rv = FSW_UNSUPPORTED;
-
 	vol->primary_voldesc = NULL;
 	fsw_set_blocksize (vol, HFS_BLOCKSIZE, HFS_BLOCKSIZE);
 	blockno = HFS_SUPERBLOCK_BLOCKNO;
 
 #define CHECK(sx) if (sx != FSW_SUCCESS) { rv = sx; break; }
-
-	vol->emb_block_off = 0;
-	vol->hfs_kind = 0;
 
 	do {
 		fsw_u16 signature;
@@ -355,31 +350,7 @@ fsw_hfs_volume_mount (
 		voldesc = (HFSPlusVolumeHeader *) buffer;
 		signature = be16_to_cpu (voldesc->signature);
 
-		if ((signature == kHFSPlusSigWord) || (signature == kHFSXSigWord)) {
-			if (vol->hfs_kind == 0) {
-				FSW_MSG_DEBUGV ((FSW_MSGSTR ("fsw_hfs: Found HFS+\n")));
-				vol->hfs_kind = FSW_HFS_PLUS;
-			}
-		} else if (signature == kHFSSigWord) {
-			HFSMasterDirectoryBlock *mdb = (HFSMasterDirectoryBlock *) buffer;
-
-			if (be16_to_cpu (mdb->drEmbedSigWord) == kHFSPlusSigWord) {
-				FSW_MSG_DEBUGV ((FSW_MSGSTR
-								 ("fsw_hfs: Found HFS+ inside HFS, untested\n")));
-				vol->hfs_kind = FSW_HFS_PLUS_EMB;
-				vol->emb_block_off = be32_to_cpu (mdb->drEmbedExtent.startBlock);
-				fsw_block_release (vol, blockno, buffer);
-				blockno += vol->emb_block_off;
-				/* retry */
-				continue;
-			} else {
-				FSW_MSG_DEBUGV ((FSW_MSGSTR
-								 ("fsw_hfs: Found plain HFS, unsupported\n")));
-				vol->hfs_kind = FSW_HFS_PLAIN;
-			}
-			rv = FSW_UNSUPPORTED;
-			break;
-		} else {
+		if ((signature != kHFSPlusSigWord) && (signature != kHFSXSigWord)) {
 			rv = FSW_UNSUPPORTED;
 			break;
 		}
@@ -1164,7 +1135,7 @@ fsw_hfs_get_extent (
     fsw_u32 phys_bno;
 
     if (fsw_hfs_find_block (exts, &lbno, &phys_bno)) {
-      extent->phys_start = phys_bno + vol->emb_block_off;
+      extent->phys_start = phys_bno;
       status = FSW_SUCCESS;
       break;
     }
