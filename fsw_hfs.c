@@ -917,7 +917,7 @@ fsw_hfs_btree_iterate_node (
 		/* Iterate over all records in this node */
 
 		for (i = first_rec; i < count; i++) {
-			int rv = callback (fsw_hfs_btree_rec (btree, buffer, i), param);
+			int rv = callback (fsw_hfs_btree_rec (btree, (btnode_datum_t *) node, i), param);
 
 			switch (rv) {
 				case 1:
@@ -938,12 +938,12 @@ fsw_hfs_btree_iterate_node (
 			break;
 		}
 
+		fsw_free(buffer);
 		status = fsw_hfs_btree_read_node (btree, next_node, &buffer);
 
 		if (status != FSW_SUCCESS)
 			break;
 
-		fsw_free (node);
 		node = (BTNodeDescriptor *) buffer;
 		first_rec = 0;
 	}
