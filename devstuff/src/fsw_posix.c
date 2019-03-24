@@ -243,32 +243,33 @@ struct dirent * fsw_posix_readdir(struct fsw_posix_dir *dir)
 		fsw_dnode_release(dno);
 		return NULL;
 	}
-  
-  // fill dirent structure
-  dent.d_fileno = dno->dnode_id;
-  dent.d_reclen = ((char *)&dent.d_name - (char *)&dent.d_ino) + dno->name.size + 1;
-  switch (dno->dtype) {
-    case FSW_DNODE_TYPE_FILE:
-      dent.d_type = DT_REG;
-      break;
-    case FSW_DNODE_TYPE_DIR:
-      dent.d_type = DT_DIR;
-      break;
-    case FSW_DNODE_TYPE_SYMLINK:
-      dent.d_type = DT_LNK;
-      break;
-    default:
-      dent.d_type = DT_UNKNOWN;
-      break;
-  }
-#if 1
-  dent.d_namlen = dno->name.len;
-#endif
-  memcpy(dent.d_name, dno->name.data, dno->name.size);
-  dent.d_name[dno->name.size] = 0;
-  fsw_dnode_release(dno);
-  
-  return &dent;
+
+	// fill dirent structure
+	dent.d_ino = dno->dnode_id;
+
+	switch (dno->dtype) {
+		case FSW_DNODE_TYPE_FILE:
+			dent.d_type = DT_REG;
+			break;
+		case FSW_DNODE_TYPE_DIR:
+			dent.d_type = DT_DIR;
+			break;
+		case FSW_DNODE_TYPE_SYMLINK:
+			dent.d_type = DT_LNK;
+			break;
+		default:
+			dent.d_type = DT_UNKNOWN;
+			break;
+	}
+
+	dent.d_namlen = dno->name.size;	// XXX: chars/letters are not bytes any more
+	(void) memcpy(dent.d_name, dno->name.data, dent.d_namlen);
+	dent.d_name[dent.d_namlen] = 0;
+	dent.d_reclen = ((char *)&dent.d_name - (char *)&dent.d_ino) + dent.d_namlen + 1;
+
+	fsw_dnode_release(dno);
+
+	return &dent;
 }
 
 /**
