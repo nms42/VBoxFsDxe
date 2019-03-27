@@ -733,7 +733,7 @@ static fsw_status_t
 			}
 
 			if (cmp < 0)
-				currkey = fsw_hfs_btree_rec (btree, buffer, upper);
+				currkey = fsw_hfs_btree_rec (btree, buffer, upper - 1);
 
 			if (node->kind == kBTIndexNode && currkey != NULL) {
 				currnode = fsw_hfs_btree_ix_ptr (currkey);
