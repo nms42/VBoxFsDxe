@@ -986,7 +986,7 @@ static int
 fsw_hfs_cmp2_catkey (
 	HFSPlusCatalogKey *ckey1,
 	HFSPlusCatalogKey *ckey2,
-	int exact
+	int fold
 )
 {
 	int rv;
@@ -1020,7 +1020,7 @@ fsw_hfs_cmp2_catkey (
 
 		for (ac = 0; ac == 0 && apos < ckey1nlen; apos++) {
 			ac = be16_to_cpu (p1[apos]);
-			if (!exact)
+			if (fold)
 				ac = ac ? fsw_to_lower (ac) : 0xFFFF;
 		}
 
@@ -1028,7 +1028,7 @@ fsw_hfs_cmp2_catkey (
 
 		for (bc = 0; bc == 0 && bpos < ckey2nlen; bpos++) {
 			bc = p2[bpos];
-			if (!exact)
+			if (fold)
 				bc = bc ? fsw_to_lower (bc) : 0xFFFF;
 		}
 
@@ -1045,13 +1045,13 @@ fsw_hfs_cmp2_catkey (
 static int
 fsw_hfs_cmp_catkey (BTreeKey *key1, BTreeKey *key2)
 {
-	return fsw_hfs_cmp2_catkey((HFSPlusCatalogKey *) key1, (HFSPlusCatalogKey *) key2, 1);
+	return fsw_hfs_cmp2_catkey((HFSPlusCatalogKey *) key1, (HFSPlusCatalogKey *) key2, 0);
 }
 
 static int
 fsw_hfs_cmpi_catkey (BTreeKey *key1, BTreeKey *key2)
 {
-	return fsw_hfs_cmp2_catkey((HFSPlusCatalogKey *) key1, (HFSPlusCatalogKey *) key2, 0);
+	return fsw_hfs_cmp2_catkey((HFSPlusCatalogKey *) key1, (HFSPlusCatalogKey *) key2, 1);
 }
 
 /**
