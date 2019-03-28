@@ -983,85 +983,32 @@ fsw_hfs_cmp_extkey (
 }
 
 static int
-fsw_hfs_cmp_catkey ( BTreeKey * key1, BTreeKey * key2)
+fsw_hfs_cmp2_catkey (
+	HFSPlusCatalogKey *ckey1,
+	HFSPlusCatalogKey *ckey2,
+	int exact
+)
 {
-	HFSPlusCatalogKey *ckey1 = (HFSPlusCatalogKey *) key1;
-	HFSPlusCatalogKey *ckey2 = (HFSPlusCatalogKey *) key2;
-
-	int apos, bpos, lc;
-	fsw_u16 ac, bc;
-	fsw_u32 parentId1;
-	int key1Len;
+	int rv;
+	int apos;
+	int bpos;
+	int ckey1nlen;
+	int ckey2nlen;
+	fsw_u16 ac;
+	fsw_u16 bc;
 	fsw_u16 *p1;
 	fsw_u16 *p2;
 
-	parentId1 = be32_to_cpu (ckey1->parentID);
+	rv = be32_to_cpu(ckey1->parentID) - ckey2->parentID;
 
-	if (parentId1 > ckey2->parentID)
-		return 1;
+	if (rv != 0)
+		return rv;
 
-	if (parentId1 < ckey2->parentID)
-		return -1;
+	ckey1nlen = be16_to_cpu (ckey1->nodeName.length);
+	ckey2nlen = ckey2->nodeName.length;
 
-	p1 = &ckey1->nodeName.unicode[0];
-	p2 = &ckey2->nodeName.unicode[0];
-	key1Len = be16_to_cpu (ckey1->nodeName.length);
-	apos = bpos = 0;
-
-	for (;;) {
-		/* get next valid character from ckey1 */
-
-		for (lc = 0; lc == 0 && apos < key1Len; apos++) {
-			ac = be16_to_cpu (p1[apos]);
-			lc = ac;
-		};
-
-		ac = (fsw_u16) lc;
-
-		/* get next valid character from ckey2 */
-
-		for (lc = 0; lc == 0 && bpos < ckey2->nodeName.length; bpos++) {
-			bc = p2[bpos];
-			lc = bc;
-		};
-
-		bc = (fsw_u16) lc;
-
-		if (ac != bc || (ac == 0 && bc == 0))
-			return ac - bc;
-	}
-}
-
-static int
-fsw_hfs_cmpi_catkey (
-					 BTreeKey * key1,
-					 BTreeKey * key2
-					 )
-{
-	HFSPlusCatalogKey *ckey1 = (HFSPlusCatalogKey *) key1;
-	HFSPlusCatalogKey *ckey2 = (HFSPlusCatalogKey *) key2;
-
-	int apos, bpos, lc;
-	fsw_u16 ac, bc;
-	fsw_u32 parentId1;
-	int key1Len;
-	int key2Len;
-	fsw_u16 *p1;
-	fsw_u16 *p2;
-
-	parentId1 = be32_to_cpu (ckey1->parentID);
-
-	if (parentId1 > ckey2->parentID)
-		return 1;
-
-	if (parentId1 < ckey2->parentID)
-		return -1;
-
-	key1Len = be16_to_cpu (ckey1->nodeName.length);
-	key2Len = ckey2->nodeName.length;
-
-	if (key1Len == 0 || key2Len == 0)
-		return key1Len - key2Len;
+	if (ckey1nlen == 0 || ckey2nlen == 0)
+		return ckey1nlen - ckey2nlen;
 
 	p1 = &ckey1->nodeName.unicode[0];
 	p2 = &ckey2->nodeName.unicode[0];
@@ -1071,35 +1018,40 @@ fsw_hfs_cmpi_catkey (
 	for (;;) {
 		/* get next valid character from ckey1 */
 
-		for (lc = 0; lc == 0 && apos < key1Len; apos++) {
+		for (ac = 0; ac == 0 && apos < ckey1nlen; apos++) {
 			ac = be16_to_cpu (p1[apos]);
-			lc = ac ? fsw_to_lower (ac) : 0xFFFF;
+			if (!exact)
+				ac = ac ? fsw_to_lower (ac) : 0xFFFF;
 		}
-
-		ac = (fsw_u16) lc;
 
 		/* get next valid character from ckey2 */
 
-		for (lc = 0; lc == 0 && bpos < key2Len; bpos++) {
+		for (bc = 0; bc == 0 && bpos < ckey2nlen; bpos++) {
 			bc = p2[bpos];
-			lc = bc ? fsw_to_lower (bc) : 0xFFFF;
+			if (!exact)
+				bc = bc ? fsw_to_lower (bc) : 0xFFFF;
 		}
-
-		bc = (fsw_u16) lc;
 
 		if (ac != bc)
 			break;
 
-		if (bpos == key1Len)
+		if (bpos == ckey1nlen)
 			return 0;
 	}
 
-	if (ac == bc)
-		return 0;
-	else if (ac < bc)
-		return -1;
-	else
-		return 1;
+	return (ac - bc);
+}
+
+static int
+fsw_hfs_cmp_catkey (BTreeKey *key1, BTreeKey *key2)
+{
+	return fsw_hfs_cmp2_catkey((HFSPlusCatalogKey *) key1, (HFSPlusCatalogKey *) key2, 1);
+}
+
+static int
+fsw_hfs_cmpi_catkey (BTreeKey *key1, BTreeKey *key2)
+{
+	return fsw_hfs_cmp2_catkey((HFSPlusCatalogKey *) key1, (HFSPlusCatalogKey *) key2, 0);
 }
 
 /**
@@ -1111,11 +1063,7 @@ fsw_hfs_cmpi_catkey (
  */
 
 static fsw_status_t
-fsw_hfs_get_extent (
-					struct fsw_hfs_volume *vol,
-					struct fsw_hfs_dnode *dno,
-					struct fsw_extent *extent
-					)
+fsw_hfs_get_extent (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct fsw_extent *extent)
 {
 	fsw_status_t status;
 	fsw_u32 lbno;
