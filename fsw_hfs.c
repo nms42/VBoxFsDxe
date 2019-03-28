@@ -117,6 +117,11 @@ static BTreeKey *fsw_hfs_btnode_key (
 	fsw_u32 tuplenum
 );
 
+static fsw_status_t fsw_hfs_dnode_fillname (
+	struct fsw_hfs_volume *vol,
+	struct fsw_hfs_dnode *dno
+);
+
 //
 // Dispatch Table
 //
@@ -445,13 +450,23 @@ fsw_hfs_volume_stat (struct fsw_hfs_volume *vol, struct fsw_volume_stat *sb)
  */
 
 static fsw_status_t
-fsw_hfs_dnode_fill ( struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
+fsw_hfs_dnode_fill (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
 {
+	fsw_status_t status;
+
 	if (fsw_dnode_is_root(&dno->g))
 		return FSW_SUCCESS;
 
 	if (dno->g.dkind != FSW_DNODE_KIND_UNKNOWN)
 		return FSW_SUCCESS;
+
+	if (fsw_strlen(&dno->g.name) != 0)
+		return FSW_SUCCESS;
+
+	status = fsw_hfs_dnode_fillname(vol, dno);
+
+	if (status == FSW_SUCCESS)
+		return status;
 
 	return FSW_NOT_FOUND;
 }
@@ -1231,4 +1246,28 @@ fsw_hfs_readlink (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
   /* Unknown link type */
 
   return FSW_UNSUPPORTED;
+}
+
+static fsw_status_t
+fsw_hfs_dnode_fillname (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
+{
+	fsw_status_t status;
+	btnode_datum_t *btnode = NULL;
+	fsw_u32 tuplenum;
+	HFSPlusCatalogKey catkey;
+
+	fsw_memzero(&catkey, sizeof(catkey));
+	catkey.parentID = dno->g.dnode_id;
+
+	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey, fsw_hfs_cmp_catkey, &btnode, &tuplenum);
+
+	if (status == FSW_SUCCESS) {
+		HFSPlusCatalogThread *tr;
+
+		tr = (HFSPlusCatalogThread *) fsw_hfs_btnode_record_ptr (fsw_hfs_btnode_key (&vol->catalog_tree, btnode, tuplenum));
+		dno->g.parent_id = be32_to_cpu(tr->parentID);
+		status = fsw_hfs_unistr2string(&dno->g.name, vol->g.host_string_kind, &tr->nodeName);
+	}
+
+	return status;
 }
