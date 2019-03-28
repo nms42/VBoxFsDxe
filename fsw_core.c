@@ -411,7 +411,7 @@ fsw_status_t fsw_dnode_create_root(struct fsw_volume *vol, fsw_u32 dnode_id, str
 
 int fsw_dnode_is_root(struct fsw_dnode *dno)
 {
-  if (dno->parent == NULL &&
+  if ((dno->parent == NULL || dno->parent == dno) &&
       dno->dkind == FSW_DNODE_KIND_DIR &&
       dno->dnode_id == dno->parent_id &&
       fsw_strlen(&dno->name) == 0) {
