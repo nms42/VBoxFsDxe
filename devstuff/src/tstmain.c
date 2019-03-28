@@ -79,6 +79,7 @@ id2path(struct fsw_posix_volume *pvol, char *idnum)
 {
     fsw_status_t status;
     struct fsw_string_list *path;
+    struct fsw_string_list *pe;
     fsw_u32 dnid;
 
     path = NULL;
@@ -88,6 +89,14 @@ id2path(struct fsw_posix_volume *pvol, char *idnum)
     if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_dnode_id_fullpath(%u) returned %d.\n", dnid, status);
     }
+
+    fprintf(outfile, "Path for #%u is ", dnid);
+
+    for (pe = path; pe != NULL; pe = pe->flink) {
+	fprintf(outfile, "/%*s", fsw_strlen(pe->str), (char *) pe->str->data);
+    }
+
+    fprintf(outfile, "\n");
 }
 
 void
