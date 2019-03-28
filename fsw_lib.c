@@ -64,9 +64,12 @@ fsw_status_t fsw_alloc_zero(int len, void **ptr_out)
     fsw_status_t status;
 
     status = fsw_alloc(len, ptr_out);
+
     if (status != FSW_SUCCESS)
         return status;
+
     fsw_memzero(*ptr_out, len);
+
     return FSW_SUCCESS;
 }
 
@@ -79,9 +82,12 @@ fsw_status_t fsw_memdup(void **dest_out, void *src, int len)
     fsw_status_t status;
 
     status = fsw_alloc(len, dest_out);
+
     if (status != FSW_SUCCESS)
         return status;
+
     fsw_memcpy(*dest_out, src, len);
+
     return FSW_SUCCESS;
 }
 
@@ -93,6 +99,7 @@ int fsw_strlen(struct fsw_string *s)
 {
     if (s->skind == FSW_STRING_KIND_EMPTY)
         return 0;
+
     return s->len;
 }
 
@@ -322,8 +329,10 @@ fsw_u16 fsw_to_lower(fsw_u16 ch)
 
     if (ch < 0x0100)
         return fsw_latin_case_fold[ch];
+
 #ifndef VBOX_LATIN1_FOLD
     temp = fsw_lower_case_table[ch>>8];
+
     if (temp != 0)
         return fsw_lower_case_table[temp + (ch & 0x00FF)];
 #endif
@@ -344,6 +353,7 @@ int fsw_streq(struct fsw_string *s1, struct fsw_string *s2)
     fsw_string_setter(&temp_s, FSW_STRING_KIND_ISO88591, 0, 0, NULL);
 
     // handle empty strings
+
     if (s1->skind == FSW_STRING_KIND_EMPTY) {
         return fsw_streq(&temp_s, s2);
     }
@@ -353,6 +363,7 @@ int fsw_streq(struct fsw_string *s1, struct fsw_string *s2)
     }
 
     // check length (count of chars)
+
     if (s1->len != s2->len)
         return 0;
 
@@ -361,8 +372,10 @@ int fsw_streq(struct fsw_string *s1, struct fsw_string *s2)
 
     if (s1->skind == s2->skind) {
         // same kind, do a dumb memory compare
+
         if (s1->size != s2->size)
             return 0;
+
         return fsw_memeq(s1->data, s2->data, s1->size);
     }
 
@@ -435,10 +448,12 @@ fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, fsw_string_kind_t kind, 
     if (src->skind == kind) {
         fsw_string_setter(dest, kind, src->len, src->size, NULL);
         status = fsw_alloc(dest->size, &dest->data);
+
         if (status != FSW_SUCCESS)
             return status;
 
         fsw_memcpy(dest->data, src->data, dest->size);
+		
         return FSW_SUCCESS;
     }
 
@@ -493,14 +508,18 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
         fsw_u8 *p;
 
         p = (fsw_u8 *)element->data;
+
         for (i = 0; i < maxlen; i++, p++) {
+
             if (*p == separator) {
                 buffer->data = p + 1;
                 buffer->len -= i + 1;
                 break;
             }
         }
+
         element->len = i;
+
         if (i == maxlen) {
             buffer->data = p;
             buffer->len -= i;
@@ -513,7 +532,9 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
         fsw_u16 *p;
 
         p = (fsw_u16 *)element->data;
+
         for (i = 0; i < maxlen; i++, p++) {
+
             if (*p == separator) {
                 buffer->data = p + 1;
                 buffer->len -= i + 1;
@@ -521,6 +542,7 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
             }
         }
         element->len = i;
+
         if (i == maxlen) {
             buffer->data = p;
             buffer->len -= i;
@@ -581,11 +603,13 @@ struct fsw_string_list* fsw_string_list_prepend(struct fsw_string_list* lst, str
 	fsw_status_t status;
 	struct fsw_string_list* fresh = NULL;
 
-	status = fsw_alloc(sizeof(*fresh), &fresh);
+	status = fsw_alloc(sizeof (*fresh), &fresh);
+
 	if (status == FSW_SUCCESS) {
 		fresh->str = str;
 		fresh->flink = lst;
 	}
+
 	return fresh;
 }
 
