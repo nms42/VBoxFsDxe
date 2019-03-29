@@ -929,6 +929,23 @@ fsw_hfs_cmp_extkey (BTreeKey *key1, BTreeKey *key2)
 	return result;
 }
 
+/* Thread key search */
+
+static int
+fsw_hfs_cmpt_catkey (BTreeKey *btkey1, BTreeKey *btkey2)
+{
+	HFSPlusCatalogKey *ckey1 = (HFSPlusCatalogKey *) btkey1;
+	HFSPlusCatalogKey *ckey2 = (HFSPlusCatalogKey *) btkey2;
+	int rv;
+
+	rv = be32_to_cpu(ckey1->parentID) - ckey2->parentID;
+
+	if (rv != 0)
+		return rv;
+
+	return ckey1->nodeName.length;
+}
+
 static int
 fsw_hfs_cmp2_catkey (HFSPlusCatalogKey *ckey1, HFSPlusCatalogKey *ckey2, int fold)
 {
@@ -1259,7 +1276,7 @@ fsw_hfs_dnode_fillname (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
 	fsw_memzero(&catkey, sizeof(catkey));
 	catkey.parentID = dno->g.dnode_id;
 
-	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey, fsw_hfs_cmp_catkey, &btnode, &tuplenum);
+	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey, fsw_hfs_cmpt_catkey, &btnode, &tuplenum);
 
 	if (status == FSW_SUCCESS) {
 		HFSPlusCatalogThread *tr;
