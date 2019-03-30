@@ -122,6 +122,16 @@ static fsw_status_t fsw_hfs_dnode_fillname (
 	struct fsw_hfs_dnode *dno
 );
 
+static int fsw_hfs_cmpb_catkey (
+		BTreeKey *key1,
+		BTreeKey *key2
+);
+
+static int fsw_hfs_cmpi_catkey (
+		BTreeKey *key1,
+		BTreeKey *key2
+);
+
 //
 // Dispatch Table
 //
@@ -280,7 +290,7 @@ fsw_hfs_volume_catalog_setup (struct fsw_hfs_volume *vol)
 	hr = fsw_hfs_btree_read_hdrec(&vol->catalog_tree);
 
 	if (hr != NULL) {
-		vol->case_sensitive = (hr->keyCompareType == kHFSBinaryCompare);
+		vol->btkey_compare = hr->keyCompareType == kHFSBinaryCompare ? fsw_hfs_cmpb_catkey : fsw_hfs_cmpi_catkey;
 	} else {
 		return FSW_VOLUME_CORRUPTED;
 	}
@@ -1003,7 +1013,7 @@ fsw_hfs_cmp2_catkey (HFSPlusCatalogKey *ckey1, HFSPlusCatalogKey *ckey2, int fol
 }
 
 static int
-fsw_hfs_cmp_catkey (BTreeKey *key1, BTreeKey *key2)
+fsw_hfs_cmpb_catkey (BTreeKey *key1, BTreeKey *key2)
 {
 	return fsw_hfs_cmp2_catkey((HFSPlusCatalogKey *) key1, (HFSPlusCatalogKey *) key2, 0);
 }
@@ -1155,7 +1165,7 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 	catkey.keyLength = (fsw_u16) (6 + rec_name.size);	// XXX?
 
 	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey,
-								   vol->case_sensitive ? fsw_hfs_cmp_catkey :fsw_hfs_cmpi_catkey,
+								   vol->btkey_compare,
 								   &btnode, &tuplenum);
 	if (status != FSW_SUCCESS)
 		goto done;
@@ -1201,7 +1211,7 @@ fsw_hfs_dir_read (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 	catkey.parentID = dno->g.dnode_id;
 
 	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey,
-					   vol->case_sensitive ? fsw_hfs_cmp_catkey : fsw_hfs_cmpi_catkey,
+					   vol->btkey_compare,
 					   &btnode, &tuplenum);
 
 	if (status == FSW_SUCCESS) {

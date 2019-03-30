@@ -143,7 +143,7 @@ struct fsw_hfs_volume
     struct fsw_hfs_btree          catalog_tree;     // Catalog tree
     struct fsw_hfs_btree          extents_tree;     // Extents overflow tree
     struct fsw_hfs_dnode          root_file;
-    int                           case_sensitive;
+    int                           (*btkey_compare)(BTreeKey *fskey, BTreeKey *hostkey);
     fsw_u32                       block_size_shift;
 };
 
