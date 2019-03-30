@@ -651,7 +651,7 @@ fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_
 			break;
 		}
 
-#ifndef VBOXHFS_BTREE_BINSEARCH
+#if 1
 		/* linear search */
 		for (tuplenum = 0; tuplenum < count; tuplenum++) {
 			currkey = fsw_hfs_btnode_key (btree, rawbtnode, tuplenum);
