@@ -462,7 +462,7 @@ fsw_hfs_volume_stat (struct fsw_hfs_volume *vol, struct fsw_volume_stat *sb)
 static fsw_status_t
 fsw_hfs_dnode_fill (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
 {
-	fsw_status_t status;
+	fsw_status_t status = FSW_UNKNOWN_ERROR;
 
 	if (fsw_dnode_is_root(&dno->g))
 		return FSW_SUCCESS;
@@ -470,15 +470,11 @@ fsw_hfs_dnode_fill (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
 	if (dno->g.dkind != FSW_DNODE_KIND_UNKNOWN)
 		return FSW_SUCCESS;
 
-	if (fsw_strlen(&dno->g.name) != 0)
-		return FSW_SUCCESS;
+	if (fsw_strlen(&dno->g.name) == 0) {
+		status = fsw_hfs_dnode_fillname(vol, dno);
+	}
 
-	status = fsw_hfs_dnode_fillname(vol, dno);
-
-	if (status == FSW_SUCCESS)
-		return status;
-
-	return FSW_NOT_FOUND;
+	return status;
 }
 
 /**
