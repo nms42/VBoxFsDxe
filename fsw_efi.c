@@ -395,7 +395,7 @@ fsw_efi_DriverBinding_Start (
   EFI_DISK_IO_PROTOCOL *DiskIo;
   BOOLEAN LockedByMe;
 
-  FSW_MSG_DEBUG ((FSW_MSGSTR (__FUNCTION__ ": enter\n")));
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter\n"), __FUNCTION__));
   LockedByMe = FALSE;
 
   Status = fsw_efi_AcquireLockOrFail ();
@@ -440,7 +440,7 @@ Exit:
   if (LockedByMe) {
     fsw_efi_ReleaseLock ();
   }
-  FSW_MSG_DEBUG ((FSW_MSGSTR (__FUNCTION__ ": leaving with %r\n"), Status));
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with %r\n"), __FUNCTION__, Status));
   return Status;
 }
 
@@ -466,13 +466,12 @@ fsw_efi_DriverBinding_Stop (
   EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystem;
   FSW_VOLUME_DATA *Volume;
 
-  FSW_MSG_DEBUG ((FSW_MSGSTR (__FUNCTION__ ": enter\n")));
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter\n"), __FUNCTION__));
   Status =
     BS->OpenProtocol (ControllerHandle, &PROTO_NAME (SimpleFileSystemProtocol),
                       (VOID **) &FileSystem, This->DriverBindingHandle,
                       ControllerHandle, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
-  FSW_MSG_DEBUG ((FSW_MSGSTR (__FUNCTION__ ": protocol opened with %r\n"),
-                  Status));
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: protocol opened with %r\n"), __FUNCTION__, Status));
   if (!EFI_ERROR (Status)) {
     Volume = FSW_VOLUME_FROM_VOL_INTERFACE (FileSystem);
     fsw_efi_DetachVolume (Volume);
@@ -481,7 +480,7 @@ fsw_efi_DriverBinding_Stop (
   Status =
     BS->CloseProtocol (ControllerHandle, &PROTO_NAME (DiskIoProtocol),
                        This->DriverBindingHandle, ControllerHandle);
-  FSW_MSG_DEBUG ((FSW_MSGSTR (__FUNCTION__ ": leaving with %r\n"), Status));
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with %r\n"), __FUNCTION__, Status));
   return Status;
 }
 
@@ -560,8 +559,7 @@ fsw_efi_read_block (
                               vol->phys_blocksize, buffer);
   Volume->LastIOStatus = Status;
   if (EFI_ERROR (Status)) {
-    FSW_MSG_DEBUG ((FSW_MSGSTR (__FUNCTION__ ": ReadDisk() returned %r\n"),
-                    Status));
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: ReadDisk() returned %r\n"), __FUNCTION__, Status));
     return FSW_IO_ERROR;
   }
   return FSW_SUCCESS;
@@ -677,14 +675,14 @@ fsw_efi_FileHandle_Delete (
 {
   EFI_STATUS Status;
 
-  FSW_MSG_DEBUG ((FSW_MSGSTR (__FUNCTION__ ": enter\n")));
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter\n"), __FUNCTION__));
   Status = This->Close (This);
   if (Status == EFI_SUCCESS) {
     // this driver is read-only
     Status = EFI_WARN_DELETE_FAILURE;
   }
 
-  FSW_MSG_DEBUG ((FSW_MSGSTR (__FUNCTION__ ": leaving with %r\n"), Status));
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with %r\n"), __FUNCTION__, Status));
   return Status;
 }
 
@@ -726,10 +724,9 @@ fsw_efi_FileHandle_Write (
   IN VOID *Buffer
 )
 {
-  FSW_MSG_DEBUG ((FSW_MSGSTR (__FUNCTION__ ": enter\n")));
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter\n"), __FUNCTION__));
   // this driver is read-only
-  FSW_MSG_DEBUG ((FSW_MSGSTR
-                  (__FUNCTION__ ": leaving with Write Protected\n")));
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with Write Protected\n"), __FUNCTION__));
   return EFI_WRITE_PROTECTED;
 }
 
@@ -819,8 +816,7 @@ fsw_efi_FileHandle_SetInfo (
 )
 {
   // this driver is read-only
-  FSW_MSG_DEBUG ((FSW_MSGSTR
-                  (__FUNCTION__ ": enter/leave with Write Protected\n")));
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter/leave with Write Protected\n"), __FUNCTION__));
   return EFI_WRITE_PROTECTED;
 }
 
@@ -835,8 +831,7 @@ fsw_efi_FileHandle_Flush (
 )
 {
   // this driver is read-only
-  FSW_MSG_DEBUG ((FSW_MSGSTR
-                  (__FUNCTION__ ": enter/leave with Write Protected\n")));
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter/leave with Write Protected\n"), __FUNCTION__));
   return EFI_WRITE_PROTECTED;
 }
 
