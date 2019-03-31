@@ -74,7 +74,7 @@ typedef UINT64  fsw_u64;
 // allocation functions
 
 #define fsw_alloc(size, ptrptr) (((*(ptrptr) = AllocatePool(size)) == NULL) ? FSW_OUT_OF_MEMORY : FSW_SUCCESS)
-#define fsw_free(ptr) FreePool(ptr)
+#define fsw_free(ptr) if (ptr != NULL) FreePool(ptr)
 
 // memory functions
 
