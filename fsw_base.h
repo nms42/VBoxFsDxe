@@ -76,19 +76,19 @@
 // message printing
 
 #if FSW_DEBUG_LEVEL >= 1
-#define FSW_MSG_ASSERT(params) FSW_MSGFUNC params
+#define FSW_MSG_ASSERT(...) FSW_MSGFUNC(__VA_ARGS__)
 #else
 #define FSW_MSG_ASSERT(params)
 #endif
 
 #if FSW_DEBUG_LEVEL >= 2
-#define FSW_MSG_DEBUG(params) FSW_MSGFUNC params
+#define FSW_MSG_DEBUG(...) FSW_MSGFUNC(__VA_ARGS__)
 #else
 #define FSW_MSG_DEBUG(params)
 #endif
 
 #if FSW_DEBUG_LEVEL >= 3
-#define FSW_MSG_DEBUGV(params) FSW_MSGFUNC params
+#define FSW_MSG_DEBUGV(...) FSW_MSGFUNC(__VA_ARGS__)
 #else
 #define FSW_MSG_DEBUGV(params)
 #endif

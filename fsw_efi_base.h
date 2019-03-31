@@ -82,10 +82,10 @@ typedef UINT64  fsw_u64;
 #define fsw_memcpy(dest,src,size) CopyMem(dest,src,size)
 #define fsw_memeq(p1,p2,size) (CompareMem(p1,p2,size) == 0)
 
-// message printing
+// Message printing
 
 #define FSW_MSGSTR(s) DEBUG_INFO, s
-#define FSW_MSGFUNC DebugPrint
+#define FSW_MSGFUNC(...) DEBUG(__VA_ARGS__)
 
 // text creation
 
