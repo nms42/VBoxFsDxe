@@ -52,6 +52,8 @@
 
 #include "fsw_efi.h"
 
+#include "AppleBless.h"
+
 #ifndef FSTYPE
 #ifdef VBOX
 #error FSTYPE must be defined!
@@ -61,10 +63,20 @@
 #endif
 
 /** Helper macro for stringification. */
+
 #define FSW_EFI_STRINGIFY(x) L#x
 
 /** Expands to the EFI driver name given the file system type name. */
+
 #define FSW_EFI_DRIVER_NAME(t) L"Fsw " FSW_EFI_STRINGIFY(t) L" File System Driver"
+
+EFI_GUID gAppleBlessedAlternateOsInfoGuid = APPLE_BLESSED_ALTERNATE_OS_INFO_GUID;
+EFI_GUID gAppleBlessedSystemFileInfoGuid = APPLE_BLESSED_SYSTEM_FILE_INFO_GUID;
+EFI_GUID gAppleBlessedSystemFolderInfoGuid = APPLE_BLESSED_SYSTEM_FOLDER_INFO_GUID;
+
+#define APPLE_GUID_NAME(xx) gApple ## xx ## Guid
+
+// ----------------------------------------
 
 // function prototypes
 
@@ -1129,6 +1141,7 @@ fsw_efi_dnode_getinfo (
   struct fsw_volume_stat vsb;
 
   Volume = (FSW_VOLUME_DATA *) File->shand.dnode->vol->host_data;
+
   if (CompareGuid (InformationType, &GUID_NAME (FileInfo))) {
     Status = fsw_efi_dnode_fill_FileInfo (Volume, File->shand.dnode, BufferSize, Buffer);
   } else if (CompareGuid (InformationType, &GUID_NAME (FileSystemInfo))) {
@@ -1187,7 +1200,70 @@ fsw_efi_dnode_getinfo (
 
     *BufferSize = RequiredSize;
     Status = EFI_SUCCESS;
+  } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFileInfo))) {
+#if 1
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - BlessedSystemFileInfo (%g)\n"), __FUNCTION__, InformationType));
+    Status = EFI_UNSUPPORTED;
+#else
+
+    // check buffer size
+
+    if (*BufferSize < RequiredSize) {
+      *BufferSize = RequiredSize;
+      Status = EFI_BUFFER_TOO_SMALL;
+      goto Done;
+    }
+
+    // ...
+
+    // prepare for return
+
+    *BufferSize = RequiredSize;
+    Status = EFI_SUCCESS;
+#endif
+  } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFolderInfo))) {
+#if 1
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - BlessedSystemFolderInfo (%g)\n"), __FUNCTION__, InformationType));
+    Status = EFI_UNSUPPORTED;
+#else
+
+    // check buffer size
+
+    if (*BufferSize < RequiredSize) {
+      *BufferSize = RequiredSize;
+      Status = EFI_BUFFER_TOO_SMALL;
+      goto Done;
+    }
+
+    // ...
+
+    // prepare for return
+
+    *BufferSize = RequiredSize;
+    Status = EFI_SUCCESS;
+#endif
+  } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedAlternateOsInfo))) {
+#if 1
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - BlessedAlternateOsInfo (%g)\n"), __FUNCTION__, InformationType));
+    Status = EFI_UNSUPPORTED;
+#else
+    // check buffer size
+
+    if (*BufferSize < RequiredSize) {
+      *BufferSize = RequiredSize;
+      Status = EFI_BUFFER_TOO_SMALL;
+      goto Done;
+    }
+
+    // ...
+
+    // prepare for return
+
+    *BufferSize = RequiredSize;
+    Status = EFI_SUCCESS;
+#endif
   } else {
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request (%g)\n"), __FUNCTION__, InformationType));
     Status = EFI_UNSUPPORTED;
   }
 
