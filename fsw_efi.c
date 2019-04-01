@@ -52,7 +52,7 @@
 
 #include "fsw_efi.h"
 
-#include "AppleBless.h"
+#include "fsw_efi_AppleBless.h"
 
 #ifndef FSTYPE
 #ifdef VBOX
