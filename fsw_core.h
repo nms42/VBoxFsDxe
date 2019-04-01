@@ -176,6 +176,16 @@ struct fsw_string_list {
     struct fsw_string *str;
 };
 
+/*
+ * XXX: typedef below breaks layering.
+ */
+
+typedef enum {
+	HFS_BLESS_SYSFLDR,
+	HFS_BLESS_SYSFILE,
+	HFS_BLESS_ALTOS
+} fsw_hfs_bless_kind_t;
+
 /* forward declarations */
 
 struct fsw_dnode;

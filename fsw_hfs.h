@@ -131,7 +131,7 @@ struct fsw_hfs_btree
 };
 
 /*
- * Volume FinderInfo in more pleasant view. It's bigendian! (On disk)
+ * Volume FinderInfo in more pleasant view. It's !bigendian! on disk.
  */
 
 struct HFSPlusVolumeFinderInfo {
@@ -143,12 +143,6 @@ struct HFSPlusVolumeFinderInfo {
   fsw_u32 blessedOSXFolderID;    // mislabeled, should be for OS 9
   fsw_u64 volumeID;
 };
-
-typedef enum {
-	HFS_BLESS_SYSFLDR,
-	HFS_BLESS_SYSFILE,
-	HFS_BLESS_ALTOS
-} fsw_hfs_bless_kind_t;
 
 /**
  * HFS: In-memory volume structure with HFS-specific data.
