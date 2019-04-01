@@ -158,6 +158,7 @@ struct fsw_hfs_volume
     struct fsw_hfs_dnode          root_file;
     int                           (*btkey_compare)(BTreeKey *fskey, BTreeKey *hostkey);
     fsw_u32                       block_size_shift;
+    struct HFSPlusVolumeFinderInfo fndr_info;
 };
 
 /* Endianess swappers */

@@ -364,7 +364,9 @@ fsw_hfs_volume_mount (struct fsw_hfs_volume *vol)
 		fsw_block_release (vol, blockno, buffer);
 		buffer = NULL;
 		voldesc = NULL;
+
 		fsw_set_blocksize (vol, block_size, block_size);
+		fsw_memcpy (&vol->fndr_info, &vol->primary_voldesc->finderInfo, sizeof (vol->fndr_info));
 
 		/* Setup catalog dnode */
 
