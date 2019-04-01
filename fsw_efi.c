@@ -1202,7 +1202,7 @@ fsw_efi_dnode_getinfo (
     Status = EFI_SUCCESS;
   } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFileInfo))) {
 #if 1
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - BlessedSystemFileInfo (%g)\n"), __FUNCTION__, InformationType));
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - (%g) BlessedSystemFileInfo\n"), __FUNCTION__, InformationType));
     Status = EFI_UNSUPPORTED;
 #else
 
@@ -1223,7 +1223,7 @@ fsw_efi_dnode_getinfo (
 #endif
   } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFolderInfo))) {
 #if 1
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - BlessedSystemFolderInfo (%g)\n"), __FUNCTION__, InformationType));
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - (%g) BlessedSystemFolderInfo\n"), __FUNCTION__, InformationType));
     Status = EFI_UNSUPPORTED;
 #else
 
@@ -1244,7 +1244,7 @@ fsw_efi_dnode_getinfo (
 #endif
   } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedAlternateOsInfo))) {
 #if 1
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - BlessedAlternateOsInfo (%g)\n"), __FUNCTION__, InformationType));
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - (%g) BlessedAlternateOsInfo\n"), __FUNCTION__, InformationType));
     Status = EFI_UNSUPPORTED;
 #else
     // check buffer size
@@ -1263,7 +1263,7 @@ fsw_efi_dnode_getinfo (
     Status = EFI_SUCCESS;
 #endif
   } else {
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request (%g)\n"), __FUNCTION__, InformationType));
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request (%g) ??????\n"), __FUNCTION__, InformationType));
     Status = EFI_UNSUPPORTED;
   }
 
