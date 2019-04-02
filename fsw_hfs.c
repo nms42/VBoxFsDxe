@@ -455,6 +455,31 @@ fsw_hfs_volume_stat (struct fsw_hfs_volume *vol, struct fsw_volume_stat *sb)
 	return FSW_SUCCESS;
 }
 
+/*
+ * Get blessed item ID
+ */
+
+fsw_u32
+fsw_hfs_vol_bless_id (struct fsw_hfs_volume *vol, fsw_hfs_bless_kind_t bkind) {
+	fsw_u32 bnid = 0;
+
+	switch (bkind) {
+	case HFS_BLESS_SYSFLDR:
+		bnid = vol->fndr_info.blessedSystemFolderID;
+		break;
+	case HFS_BLESS_SYSFILE:
+		bnid = vol->fndr_info.blessedSystemFileID;
+		break;
+	case HFS_BLESS_ALTOS:
+		bnid = vol->fndr_info.blessedAlternateOSID;
+		break;
+	default:
+		break;
+	}
+
+	return be32_to_cpu(bnid);
+}
+
 /**
  * Get full information on a dnode from disk. This function is called by the core
  * whenever it needs to access fields in the dnode structure that may not
