@@ -458,8 +458,9 @@ void         fsw_string_mkempty(struct fsw_string *s);
 void         fsw_strfree(struct fsw_string *s);
 fsw_u16      fsw_to_lower(fsw_u16 ch);
 
-struct fsw_string_list *fsw_string_list_prepend(struct fsw_string_list *lst, struct fsw_string *str);
-void         fsw_string_list_free(struct fsw_string_list *lst);
+void	fsw_string_list_lengths(struct fsw_string_list *lst, fsw_u32 *names, fsw_u32 *chars);
+struct	fsw_string_list *fsw_string_list_prepend(struct fsw_string_list *lst, struct fsw_string *str);
+void	fsw_string_list_free(struct fsw_string_list *lst);
 /*@}*/
 
 

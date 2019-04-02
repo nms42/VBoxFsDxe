@@ -585,6 +585,18 @@ void fsw_strfree(struct fsw_string *s)
  * Rudimentary list of strings
  */
 
+void fsw_string_list_lengths(struct fsw_string_list *lst, fsw_u32 *names, fsw_u32 *chars)
+{
+	*names = 0;
+	*chars = 0;
+
+	while (lst != NULL) {
+		*names += 1;
+		*chars += fsw_strlen(lst->str);
+		lst = lst->flink;
+	}
+}
+
 void fsw_string_list_free(struct fsw_string_list *lst)
 {
 	struct fsw_string_list *next;
