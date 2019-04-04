@@ -123,13 +123,18 @@ static fsw_status_t fsw_hfs_dnode_fillname (
 );
 
 static int fsw_hfs_cmpb_catkey (
-		BTreeKey *key1,
-		BTreeKey *key2
+	BTreeKey *key1,
+	BTreeKey *key2
 );
 
 static int fsw_hfs_cmpi_catkey (
-		BTreeKey *key1,
-		BTreeKey *key2
+	BTreeKey *key1,
+	BTreeKey *key2
+);
+
+fsw_u32 fsw_hfs_vol_bless_id (
+	struct fsw_hfs_volume *vol,
+	fsw_hfs_bless_kind_t bkind
 );
 
 //
