@@ -463,19 +463,8 @@ fsw_u32
 fsw_hfs_vol_bless_id (struct fsw_hfs_volume *vol, fsw_hfs_bless_kind_t bkind) {
 	fsw_u32 bnid = 0;
 
-	switch (bkind) {
-	case HFS_BLESS_SYSFLDR:
-		bnid = vol->fndr_info.blessedSystemFolderID;
-		break;
-	case HFS_BLESS_SYSFILE:
-		bnid = vol->fndr_info.blessedSystemFileID;
-		break;
-	case HFS_BLESS_ALTOS:
-		bnid = vol->fndr_info.blessedAlternateOSID;
-		break;
-	default:
-		break;
-	}
+	if ((int) bkind < 6)
+		bnid = vol->fndr_info[bkind];
 
 	return be32_to_cpu(bnid);
 }

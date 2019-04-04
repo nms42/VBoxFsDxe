@@ -130,20 +130,6 @@ struct fsw_hfs_btree
     struct fsw_hfs_dnode*    btfile;
 };
 
-/*
- * Volume FinderInfo in more pleasant view. It's !bigendian! on disk.
- */
-
-struct HFSPlusVolumeFinderInfo {
-  fsw_u32 blessedSystemFolderID; // for OpenFirmware systems
-  fsw_u32 blessedSystemFileID;   // for EFI systems
-  fsw_u32 openWindowFolderID;    // deprecated, first link in linked list of folders to open at mount
-  fsw_u32 blessedAlternateOSID;  // currently used for recovery
-  fsw_u32 unused;                // formerly PowerTalk Inbox
-  fsw_u32 blessedOSXFolderID;    // mislabeled, should be for OS 9
-  fsw_u64 volumeID;
-};
-
 /**
  * HFS: In-memory volume structure with HFS-specific data.
  */
@@ -158,7 +144,7 @@ struct fsw_hfs_volume
     struct fsw_hfs_dnode          root_file;
     int                           (*btkey_compare)(BTreeKey *fskey, BTreeKey *hostkey);
     fsw_u32                       block_size_shift;
-    struct HFSPlusVolumeFinderInfo fndr_info;
+    fsw_u32                       fndr_info[8];
 };
 
 /* Endianess swappers */
