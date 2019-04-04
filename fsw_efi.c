@@ -416,7 +416,6 @@ fsw_efi_DriverBinding_Start (
   EFI_DISK_IO_PROTOCOL *DiskIo;
   BOOLEAN LockedByMe;
 
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter\n"), __FUNCTION__));
   LockedByMe = FALSE;
 
   Status = fsw_efi_AcquireLockOrFail ();
@@ -467,8 +466,6 @@ Exit:
     fsw_efi_ReleaseLock ();
   }
 
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with %r\n"), __FUNCTION__, Status));
-
   return Status;
 }
 
@@ -494,11 +491,9 @@ fsw_efi_DriverBinding_Stop (
   EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystem;
   FSW_VOLUME_DATA *Volume;
 
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter\n"), __FUNCTION__));
   Status = BS->OpenProtocol (ControllerHandle, &PROTO_NAME (SimpleFileSystemProtocol),
                       (VOID **) &FileSystem, This->DriverBindingHandle,
                       ControllerHandle, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: protocol opened with %r\n"), __FUNCTION__, Status));
 
   if (!EFI_ERROR (Status)) {
     Volume = FSW_VOLUME_FROM_VOL_INTERFACE (FileSystem);
@@ -507,7 +502,6 @@ fsw_efi_DriverBinding_Stop (
 
   Status = BS->CloseProtocol (ControllerHandle, &PROTO_NAME (DiskIoProtocol),
                        This->DriverBindingHandle, ControllerHandle);
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with %r\n"), __FUNCTION__, Status));
 
   return Status;
 }
@@ -588,7 +582,6 @@ fsw_efi_read_block (
   Volume->LastIOStatus = Status;
 
   if (EFI_ERROR (Status)) {
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: ReadDisk() returned %r\n"), __FUNCTION__, Status));
     return FSW_IO_ERROR;
   }
 
@@ -705,7 +698,6 @@ fsw_efi_FileHandle_Delete (
 {
   EFI_STATUS Status;
 
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter\n"), __FUNCTION__));
   Status = This->Close (This);
 
   if (Status == EFI_SUCCESS) {
@@ -713,8 +705,6 @@ fsw_efi_FileHandle_Delete (
 
     Status = EFI_WARN_DELETE_FAILURE;
   }
-
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with %r\n"), __FUNCTION__, Status));
 
   return Status;
 }
@@ -757,11 +747,7 @@ fsw_efi_FileHandle_Write (
   IN VOID *Buffer
 )
 {
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter\n"), __FUNCTION__));
-
   // this driver is read-only
-
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with Write Protected\n"), __FUNCTION__));
 
   return EFI_WRITE_PROTECTED;
 }
@@ -854,8 +840,6 @@ fsw_efi_FileHandle_SetInfo (
 {
   // this driver is read-only
 
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter/leave with Write Protected\n"), __FUNCTION__));
-
   return EFI_WRITE_PROTECTED;
 }
 
@@ -870,8 +854,6 @@ fsw_efi_FileHandle_Flush (
 )
 {
   // this driver is read-only
-
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: enter/leave with Write Protected\n"), __FUNCTION__));
 
   return EFI_WRITE_PROTECTED;
 }
@@ -1120,6 +1102,89 @@ fsw_efi_dir_setpos (
   }
 }
 
+/* XXX: Actually fsw_hfs_vol_bless_info_id() expects fsw_hfs_volume *, but by design it would work */
+
+fsw_u32 fsw_hfs_vol_bless_id (
+  struct fsw_volume *vol,
+  fsw_hfs_bless_kind_t bkind
+);
+
+EFI_STATUS
+fsw_efi_bless_info (
+  IN FSW_VOLUME_DATA *Volume,
+  IN fsw_hfs_bless_kind_t bkind,
+  OUT VOID *Buffer,
+  IN OUT UINTN *BufferSize
+)
+{
+  fsw_status_t fstatus;
+  EFI_STATUS Status = EFI_UNSUPPORTED;
+  fsw_u32 bnid;
+  UINTN RequiredSize;
+  UINT16 *tmpStr;
+  UINT16 *tmpPtr;
+  struct fsw_string_list *path = NULL;
+  struct fsw_string_list *p2;
+  fsw_u32 names;
+  fsw_u32 chars;
+  EFI_DEVICE_PATH_PROTOCOL *dpp;
+
+  bnid = fsw_hfs_vol_bless_id (Volume->vol, bkind);
+
+  if (bnid == 0)
+    return EFI_NOT_FOUND;
+
+  fstatus = fsw_dnode_id_fullpath (Volume->vol, bnid, FSW_STRING_KIND_UTF16, &path);
+
+  if (fstatus != FSW_SUCCESS)
+    return EFI_NOT_FOUND;
+
+  fsw_string_list_lengths (path, &names, &chars);
+
+  RequiredSize = (names + chars + 1 + 1) * sizeof (UINT16);
+  tmpStr = AllocatePool(RequiredSize);
+
+  if (tmpStr == NULL) {
+    fsw_string_list_free(path);
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  tmpPtr = tmpStr;
+
+  for(p2 = path; p2 != NULL; p2 = p2->flink) {
+    *tmpPtr++ = L'\\';
+    fsw_efi_strcpy (tmpPtr, p2->str);
+    tmpPtr += fsw_strlen(p2->str);
+  }
+
+  fsw_string_list_free(path);
+
+  if (tmpPtr == tmpStr)	/* Root CNID returns 0 names and 0 chars */
+    *tmpPtr++ = L'\\';
+
+  *tmpPtr = 0;
+
+  dpp = FileDevicePath (Volume->Handle, tmpStr);
+  FreePool(tmpStr);
+
+  if (dpp == NULL)
+    return EFI_OUT_OF_RESOURCES;
+
+  RequiredSize = GetDevicePathSize (dpp);
+
+  if (*BufferSize < RequiredSize) {
+    Status = EFI_BUFFER_TOO_SMALL;
+  } else {
+    CopyMem (Buffer, dpp, RequiredSize);
+    Status = EFI_SUCCESS;
+  }
+
+  *BufferSize = RequiredSize;
+  FreePool (dpp);
+
+  return Status;
+}
+
 /**
  * Get file or volume information. This function implements the GetInfo call
  * for all file handles. Control is dispatched according to the type of information
@@ -1201,69 +1266,13 @@ fsw_efi_dnode_getinfo (
     *BufferSize = RequiredSize;
     Status = EFI_SUCCESS;
   } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFileInfo))) {
-#if 1
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - (%g) BlessedSystemFileInfo\n"), __FUNCTION__, InformationType));
-    Status = EFI_UNSUPPORTED;
-#else
-
-    // check buffer size
-
-    if (*BufferSize < RequiredSize) {
-      *BufferSize = RequiredSize;
-      Status = EFI_BUFFER_TOO_SMALL;
-      goto Done;
-    }
-
-    // ...
-
-    // prepare for return
-
-    *BufferSize = RequiredSize;
-    Status = EFI_SUCCESS;
-#endif
+    Status = fsw_efi_bless_info (Volume, HFS_BLESS_SYSFILE, Buffer, BufferSize);
   } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFolderInfo))) {
-#if 1
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - (%g) BlessedSystemFolderInfo\n"), __FUNCTION__, InformationType));
-    Status = EFI_UNSUPPORTED;
-#else
-
-    // check buffer size
-
-    if (*BufferSize < RequiredSize) {
-      *BufferSize = RequiredSize;
-      Status = EFI_BUFFER_TOO_SMALL;
-      goto Done;
-    }
-
-    // ...
-
-    // prepare for return
-
-    *BufferSize = RequiredSize;
-    Status = EFI_SUCCESS;
-#endif
+    Status = fsw_efi_bless_info (Volume, HFS_BLESS_SYSFLDR, Buffer, BufferSize);
   } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedAlternateOsInfo))) {
-#if 1
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request - (%g) BlessedAlternateOsInfo\n"), __FUNCTION__, InformationType));
-    Status = EFI_UNSUPPORTED;
-#else
-    // check buffer size
-
-    if (*BufferSize < RequiredSize) {
-      *BufferSize = RequiredSize;
-      Status = EFI_BUFFER_TOO_SMALL;
-      goto Done;
-    }
-
-    // ...
-
-    // prepare for return
-
-    *BufferSize = RequiredSize;
-    Status = EFI_SUCCESS;
-#endif
+    Status = fsw_efi_bless_info (Volume, HFS_BLESS_ALTOS, Buffer, BufferSize);
   } else {
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unsupported information request (%g) ??????\n"), __FUNCTION__, InformationType));
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: Unsupported request (guid %g)\n"), __FUNCTION__, InformationType));
     Status = EFI_UNSUPPORTED;
   }
 
