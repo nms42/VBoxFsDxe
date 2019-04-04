@@ -117,6 +117,10 @@ static BTreeKey *fsw_hfs_btnode_key (
 	fsw_u32 tuplenum
 );
 
+static void * fsw_hfs_btnode_record_ptr (
+	BTreeKey *currkey
+);
+
 static fsw_status_t fsw_hfs_dnode_fillname (
 	struct fsw_hfs_volume *vol,
 	struct fsw_hfs_dnode *dno
@@ -303,8 +307,7 @@ fsw_hfs_volume_catalog_setup (struct fsw_hfs_volume *vol)
 {
 	fsw_status_t status;
 	BTHeaderRec* hr;
-	btnode_datum_t* nd = NULL;
-	HFSPlusCatalogKey* ck;
+	btnode_datum_t* btnode = NULL;
 	fsw_u32 tuplenum;
 	HFSPlusCatalogKey catkey;
 
@@ -324,16 +327,17 @@ fsw_hfs_volume_catalog_setup (struct fsw_hfs_volume *vol)
 	fsw_memzero(&catkey, sizeof(catkey));
 	catkey.parentID = kHFSRootFolderID;
 
-	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey, fsw_hfs_cmpt_catkey, &nd, &tuplenum);
+	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey, fsw_hfs_cmpt_catkey, &btnode, &tuplenum);
 
 	if (status == FSW_SUCCESS) {
-		ck = (HFSPlusCatalogKey*) fsw_hfs_btnode_key(&vol->catalog_tree, nd, 0);
-		status = fsw_hfs_unistr2string(&vol->g.label, vol->g.host_string_kind, &ck->nodeName);
+		HFSPlusCatalogThread *tr;
+
+		tr = (HFSPlusCatalogThread *) fsw_hfs_btnode_record_ptr (fsw_hfs_btnode_key (&vol->catalog_tree, btnode, tuplenum));
+		status = fsw_hfs_unistr2string(&vol->g.label, vol->g.host_string_kind, &tr->nodeName);
 	} else
 		status = FSW_VOLUME_CORRUPTED;
 
-	if (nd != NULL)
-		fsw_free(nd);
+	fsw_free(btnode);
 
 	return status;
 }
