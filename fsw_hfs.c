@@ -132,9 +132,22 @@ static int fsw_hfs_cmpi_catkey (
 	BTreeKey *key2
 );
 
+static int fsw_hfs_cmpt_catkey (
+	BTreeKey *key1,
+	BTreeKey *key2
+);
+
 fsw_u32 fsw_hfs_vol_bless_id (
 	struct fsw_hfs_volume *vol,
 	fsw_hfs_bless_kind_t bkind
+);
+
+static fsw_status_t fsw_hfs_btree_search (
+	struct fsw_hfs_btree *btree,
+	BTreeKey *key,
+	int (*compare_keys) (BTreeKey *key1, BTreeKey *key2),
+	btnode_datum_t **btnode_out,
+	fsw_u32 *tuplenum_out
 );
 
 //
@@ -291,11 +304,15 @@ fsw_hfs_volume_catalog_setup (struct fsw_hfs_volume *vol)
 	fsw_status_t status;
 	BTHeaderRec* hr;
 	btnode_datum_t* nd = NULL;
+	HFSPlusCatalogKey* ck;
+	fsw_u32 tuplenum;
+	HFSPlusCatalogKey catkey;
 
 	hr = fsw_hfs_btree_read_hdrec(&vol->catalog_tree);
 
 	if (hr != NULL) {
 		vol->btkey_compare = hr->keyCompareType == kHFSBinaryCompare ? fsw_hfs_cmpb_catkey : fsw_hfs_cmpi_catkey;
+		fsw_free(hr);
 	} else {
 		return FSW_VOLUME_CORRUPTED;
 	}
@@ -304,22 +321,16 @@ fsw_hfs_volume_catalog_setup (struct fsw_hfs_volume *vol)
 
 	fsw_string_setter (&vol->g.label, FSW_STRING_KIND_EMPTY, 0, 0, NULL);
 
-	status = fsw_hfs_btree_read_node(&vol->catalog_tree, be32_to_cpu(hr->firstLeafNode), &nd);
+	fsw_memzero(&catkey, sizeof(catkey));
+	catkey.parentID = kHFSRootFolderID;
 
-	fsw_free(hr);
+	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey, fsw_hfs_cmpt_catkey, &nd, &tuplenum);
 
 	if (status == FSW_SUCCESS) {
-		HFSPlusCatalogKey* ck;
-		BTNodeDescriptor *btnd;
-
 		ck = (HFSPlusCatalogKey*) fsw_hfs_btnode_key(&vol->catalog_tree, nd, 0);
-		btnd = (BTNodeDescriptor *) nd;
-
-		if (btnd->kind == kBTLeafNode && be32_to_cpu (ck->parentID) == kHFSRootParentID) {
-			status = fsw_hfs_unistr2string(&vol->g.label, vol->g.host_string_kind, &ck->nodeName);
-		} else
-			status = FSW_VOLUME_CORRUPTED;
-	}
+		status = fsw_hfs_unistr2string(&vol->g.label, vol->g.host_string_kind, &ck->nodeName);
+	} else
+		status = FSW_VOLUME_CORRUPTED;
 
 	if (nd != NULL)
 		fsw_free(nd);
