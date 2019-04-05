@@ -779,7 +779,7 @@ fill_fileinfo (struct fsw_hfs_volume* vol, HFSPlusCatalogKey* key, file_info_t* 
 	fsw_u8* base;
 	fsw_u16 rec_type;
 
-	base = (fsw_u8 *) key + be16_to_cpu (key->keyLength) + 2;
+	base = (fsw_u8 *) fsw_hfs_btnode_record_ptr ((BTreeKey *) key);
 	rec_type = be16_to_cpu (*(fsw_u16 *) base);
 
 	/** @todo: read additional info */
@@ -1194,15 +1194,15 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 
 		if (status != FSW_SUCCESS)
 			goto done;
+
 		free_data = 1;
 		fsw_memcpy (catkey.nodeName.unicode, rec_name.data, rec_name.size);
 	}
 
 	catkey.keyLength = (fsw_u16) (6 + rec_name.size);	// XXX?
 
-	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey,
-								   vol->btkey_compare,
-								   &btnode, &tuplenum);
+	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey, vol->btkey_compare, &btnode, &tuplenum);
+
 	if (status != FSW_SUCCESS)
 		goto done;
 
