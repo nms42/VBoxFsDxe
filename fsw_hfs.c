@@ -820,9 +820,7 @@ fill_fileinfo (struct fsw_hfs_volume* vol, HFSPlusCatalogKey* key, file_info_t* 
 			}
 
 			finfo->size = be64_to_cpu (info->dataFork.logicalSize);
-			finfo->used =
-			FSW_U64_SHL (be32_to_cpu (info->dataFork.totalBlocks),
-						 vol->block_size_shift);
+			finfo->used = FSW_U64_SHL (be32_to_cpu (info->dataFork.totalBlocks), vol->block_size_shift);
 			finfo->ctime = be32_to_cpu (info->createDate);
 			finfo->mtime = be32_to_cpu (info->contentModDate);
 			fsw_memcpy (&finfo->extents, &info->dataFork.extents, sizeof (finfo->extents));
@@ -1194,7 +1192,7 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 			goto done;
 	}
 
-	fsw_memcpy (catkey.nodeName.unicode, rec_name.data, fsw_strlen(&rec_name) * sizeof (fsw_u16));
+	fsw_memcpy (catkey.nodeName.unicode, rec_name.data, fsw_strsize(&rec_name));
 
 	catkey.keyLength = (fsw_u16) (6 + rec_name.size);	// XXX?
 
@@ -1292,6 +1290,7 @@ fsw_hfs_readlink (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
     fsw_memdup (&link_target->data, metaprefix, link_target->size);
     sz = (fsw_u32) fsw_snprintf(((char *) link_target->data) + MPRFINUM, 10, "%d", (int)dno->ilink);
     link_target->len = MPRFINUM + sz;
+
     return FSW_SUCCESS;
 #undef MPRFINUM
 #undef MPRFSIZE
