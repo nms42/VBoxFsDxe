@@ -127,6 +127,15 @@ void * fsw_strchars(struct fsw_string *s)
     return (void *) s->data;
 }
 
+/**
+ * Get the kind to a string datum.
+ */
+
+fsw_string_kind_t fsw_strkind(struct fsw_string *s)
+{
+    return s->skind;
+}
+
 #ifndef VBOX_LATIN1_FOLD
 static const fsw_u16
 fsw_lower_case_table[] =

@@ -450,6 +450,7 @@ fsw_status_t fsw_memdup(void **dest_out, void *src, int len);
 int          fsw_strlen(struct fsw_string *s);
 int          fsw_strsize(struct fsw_string *s);
 void *       fsw_strchars(struct fsw_string *s);
+fsw_string_kind_t fsw_strkind(struct fsw_string *s);
 int          fsw_streq(struct fsw_string *s1, struct fsw_string *s2);
 int          fsw_streq_cstr(struct fsw_string *s1, const char *s2);
 void         fsw_string_setter(struct fsw_string *dest, fsw_string_kind_t skind, int len, int size, void *data);
