@@ -324,6 +324,10 @@ fsw_hfs_volume_catalog_setup (struct fsw_hfs_volume *vol)
 
 	fsw_string_setter (&vol->g.label, FSW_STRING_KIND_EMPTY, 0, 0, NULL);
 
+	/*
+	 * Volume label lives in thread record for kHFSRootFolderID (root folder is nameless by design)
+	 */
+
 	fsw_memzero(&catkey, sizeof(catkey));
 	catkey.parentID = kHFSRootFolderID;
 
