@@ -1170,7 +1170,6 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 	fsw_u32 tuplenum;
 	btnode_datum_t *btnode = NULL;
 	struct fsw_string rec_name;
-	int free_data = 0;
 	HFSPlusCatalogKey *file_key;
 	file_info_t file_info;
 
@@ -1193,8 +1192,6 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 
 		if (status != FSW_SUCCESS)
 			goto done;
-
-		free_data = 1;
 	}
 
 	fsw_memcpy (catkey.nodeName.unicode, rec_name.data, fsw_strlen(&rec_name) * sizeof (fsw_u16));
@@ -1218,9 +1215,7 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 done:
 
 	fsw_free (btnode);
-
-	if (free_data)
-		fsw_string_mkempty (&rec_name);
+	fsw_string_mkempty (&rec_name);
 
 	return status;
 }
