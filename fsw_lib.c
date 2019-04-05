@@ -103,6 +103,30 @@ int fsw_strlen(struct fsw_string *s)
     return s->len;
 }
 
+/**
+ * Get the memory size of a string datum. Returns the number of bytes occupied by data in the string.
+ */
+
+int fsw_strsize(struct fsw_string *s)
+{
+    if (s->skind == FSW_STRING_KIND_EMPTY)
+        return 0;
+
+    return s->size;
+}
+
+/**
+ * Get the pointer to a string datum.
+ */
+
+void * fsw_strchars(struct fsw_string *s)
+{
+    if (s->skind == FSW_STRING_KIND_EMPTY)
+        return NULL;
+
+    return (void *) s->data;
+}
+
 #ifndef VBOX_LATIN1_FOLD
 static const fsw_u16
 fsw_lower_case_table[] =
