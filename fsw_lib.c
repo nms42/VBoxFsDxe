@@ -565,9 +565,7 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
 
 void fsw_string_mkempty(struct fsw_string *s)
 {
-    if (s->skind != FSW_STRING_KIND_EMPTY && s->data != NULL)
-        fsw_free(s->data);
-
+    fsw_free(s->data);
     fsw_string_setter(s, FSW_STRING_KIND_EMPTY, 0, 0, NULL);
 }
 

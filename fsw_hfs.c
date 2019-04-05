@@ -1246,9 +1246,7 @@ fsw_hfs_dir_read (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 	fsw_memzero(&catkey, sizeof(catkey));
 	catkey.parentID = dno->g.dnode_id;
 
-	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey,
-					   vol->btkey_compare,
-					   &btnode, &tuplenum);
+	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey, vol->btkey_compare, &btnode, &tuplenum);
 
 	if (status == FSW_SUCCESS) {
 		fsw_memzero (&rec_name, sizeof (rec_name));
