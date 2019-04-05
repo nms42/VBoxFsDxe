@@ -129,14 +129,12 @@ UINTN fsw_efi_strsize(struct fsw_string *s)
 
 VOID fsw_efi_strcpy(CHAR16 *Dest, struct fsw_string *src)
 {
-    if (src->skind == FSW_STRING_KIND_EMPTY) {
-        Dest[0] = 0;
-    } else if (src->skind == FSW_STRING_KIND_UTF16) {
-        CopyMem(Dest, src->data, (src->len) * sizeof (CHAR16));
-        Dest[src->len] = 0;
+    Dest[fsw_strlen(s)] = 0;
+
+    if (fsw_strkind(src) == FSW_STRING_KIND_UTF16) {
+        CopyMem(Dest, fsw_strchars(src), fsw_strsize(src));
     } else {
         // TODO: coerce, recurse
-        Dest[0] = 0;
     }
 }
 
