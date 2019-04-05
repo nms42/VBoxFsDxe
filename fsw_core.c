@@ -78,7 +78,6 @@ fsw_status_t fsw_mount(void *host_data,
     // initialize fields
     vol->phys_blocksize = 512;
     vol->log_blocksize  = 512;
-    vol->label.skind     = FSW_STRING_KIND_EMPTY;
     vol->host_data      = host_data;
     vol->host_table     = host_table;
     vol->fstype_table   = fstype_table;
@@ -747,7 +746,7 @@ fsw_status_t fsw_dnode_lookup_path(struct fsw_dnode *dno,
     remaining_path = *lookup_path;
     fsw_dnode_retain(dno);
 
-    FSW_MSG_DEBUGV ((FSW_MSGSTR("fsw_dnode_lookup_path: '%s'\n"), (char*)(lookup_path->data)));
+    FSW_MSG_DEBUGV ((FSW_MSGSTR("fsw_dnode_lookup_path: '%s'\n"), (char*) fsw_strchars(lookup_path)));
     // loop over the path
     for (root_if_empty = 1; fsw_strlen(&remaining_path) > 0; root_if_empty = 0) {
         // parse next path component
