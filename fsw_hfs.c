@@ -844,12 +844,12 @@ typedef struct {
 } visitor_parameter_t;
 
 static int
-fsw_hfs_btree_visit_node (BTreeKey *record, void *param)
+fsw_hfs_btree_visit_node (BTreeKey *btkey, void *param)
 {
 	visitor_parameter_t *vp = (visitor_parameter_t *) param;
-	fsw_u8 *base = (fsw_u8 *) record->rawData + be16_to_cpu (record->length16) + 2;
+	fsw_u8 *base = (fsw_u8 *) fsw_hfs_btnode_record_ptr ((BTreeKey *) btkey);
 	fsw_u16 rec_type = be16_to_cpu (*(fsw_u16 *) base);
-	struct HFSPlusCatalogKey *cat_key = (HFSPlusCatalogKey *) record;
+	struct HFSPlusCatalogKey *cat_key = (HFSPlusCatalogKey *) btkey;
 	fsw_u16 name_len;
 	fsw_u16 *name_ptr;
 	fsw_u32 i;
@@ -1175,17 +1175,16 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 	file_info_t file_info;
 
 	fsw_memzero(&rec_name, sizeof(rec_name));
-	fsw_memzero (&file_info, sizeof file_info);
+	fsw_memzero(&file_info, sizeof file_info);
+	fsw_memzero(&catkey, sizeof(catkey));
+
 	file_info.name = &rec_name;
 
-	fsw_memzero(&catkey, sizeof(catkey));
 	catkey.parentID = (dno->g).dnode_id;
-	catkey.nodeName.length = (fsw_u16) lookup_name->len;
-
-	/* no need to allocate anything */
+	catkey.nodeName.length = (fsw_u16) fsw_strlen(lookup_name);
 
 	if (lookup_name->skind == FSW_STRING_KIND_UTF16) {
-		fsw_memcpy (catkey.nodeName.unicode, lookup_name->data, lookup_name->size);
+		/* no need to allocate anything */
 		rec_name = *lookup_name;
 	} else {
 		status = fsw_strdup_coerce (&rec_name, FSW_STRING_KIND_UTF16, lookup_name);
@@ -1196,8 +1195,9 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 			goto done;
 
 		free_data = 1;
-		fsw_memcpy (catkey.nodeName.unicode, rec_name.data, rec_name.size);
 	}
+
+	fsw_memcpy (catkey.nodeName.unicode, rec_name.data, fsw_strlen(&rec_name) * sizeof (fsw_u16));
 
 	catkey.keyLength = (fsw_u16) (6 + rec_name.size);	// XXX?
 
