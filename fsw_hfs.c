@@ -845,7 +845,7 @@ static int
 fsw_hfs_btree_visit_node (BTreeKey *btkey, void *param)
 {
 	visitor_parameter_t *vp = (visitor_parameter_t *) param;
-	fsw_u8 *base = (fsw_u8 *) fsw_hfs_btnode_record_ptr ((BTreeKey *) btkey);
+	fsw_u8 *base = (fsw_u8 *) fsw_hfs_btnode_record_ptr (btkey);
 	fsw_u16 rec_type = be16_to_cpu (*(fsw_u16 *) base);
 	struct HFSPlusCatalogKey *cat_key = (HFSPlusCatalogKey *) btkey;
 	fsw_u16 name_len;
@@ -856,23 +856,24 @@ fsw_hfs_btree_visit_node (BTreeKey *btkey, void *param)
 	if (be32_to_cpu (cat_key->parentID) != vp->parent)
 		return -1;
 
+	vp->file_info.kind = FSW_DNODE_KIND_UNKNOWN;
+
 	/* not smth we care about */
 
 	if (vp->shandle->pos != vp->cur_pos++)
 		return 0;
 
-	fill_fileinfo (vp->vol, cat_key, &vp->file_info);
-
 	switch (rec_type) {
 		case kHFSPlusFolderThreadRecord:
 		case kHFSPlusFileThreadRecord:
-		{
 			vp->shandle->pos++;
 			return 0;
-		}
+
 		default:
 			break;
 	}
+
+	fill_fileinfo (vp->vol, cat_key, &vp->file_info);
 
 	// TODO: code below looks untidy
 
