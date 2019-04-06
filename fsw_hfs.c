@@ -1207,9 +1207,6 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 
 	status = create_hfs_dnode (dno, &file_info, child_dno_out);
 
-	if (status != FSW_SUCCESS)
-		goto done;
-
 done:
 
 	fsw_free (btnode);
