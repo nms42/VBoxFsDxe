@@ -199,6 +199,7 @@ fsw_hfs_string2unistr(HFSUniStr255* us, struct fsw_string* fs)
 	fsw_status_t status;
 	struct fsw_string ws;
 
+	fsw_string_setter(&ws, FSW_STRING_KIND_EMPTY, 0, 0, NULL);
 	status = fsw_strdup_coerce(&ws, FSW_STRING_KIND_UTF16, fs);
 
 	if (status == FSW_SUCCESS) {
@@ -812,8 +813,8 @@ fill_fileinfo (struct fsw_hfs_volume* vol, HFSPlusCatalogKey* key, file_info_t* 
 		{
 			HFSPlusCatalogFolder *info = (HFSPlusCatalogFolder *) (void *)base;
 
-			finfo->id = be32_to_cpu (info->folderID);
 			finfo->kind = FSW_DNODE_KIND_DIR;
+			finfo->id = be32_to_cpu (info->folderID);
 
 			/* @todo: return number of elements, maybe use smth else */
 
@@ -827,6 +828,7 @@ fill_fileinfo (struct fsw_hfs_volume* vol, HFSPlusCatalogKey* key, file_info_t* 
 		{
 			HFSPlusCatalogFile *info = (HFSPlusCatalogFile *) (void *)base;
 
+			finfo->kind = FSW_DNODE_KIND_FILE;
 			finfo->id = be32_to_cpu (info->fileID);
 
 			finfo->creator = be32_to_cpu (info->userInfo.fdCreator);
@@ -838,8 +840,6 @@ fill_fileinfo (struct fsw_hfs_volume* vol, HFSPlusCatalogKey* key, file_info_t* 
 				(finfo->creator == kHFSPlusCreator && finfo->crtype == kHardLinkFileType)) {
 				finfo->kind = FSW_DNODE_KIND_SYMLINK;
 				finfo->ilink = be32_to_cpu (info->bsdInfo.special.iNodeNum);
-			} else {
-				finfo->kind = FSW_DNODE_KIND_FILE;
 			}
 
 			finfo->size = be64_to_cpu (info->dataFork.logicalSize);
@@ -1141,7 +1141,7 @@ create_hfs_dnode (struct fsw_hfs_dnode *dno, file_info_t *file_info, struct fsw_
 	/* Fill-in extents info */
 
 	if (file_info->kind == FSW_DNODE_KIND_FILE) {
-		fsw_memcpy (baby->extents, &file_info->extents, sizeof file_info->extents);
+		fsw_memcpy (baby->extents, &file_info->extents, sizeof (file_info->extents));
 	}
 
 	/* Fill-in link file info */
@@ -1150,7 +1150,7 @@ create_hfs_dnode (struct fsw_hfs_dnode *dno, file_info_t *file_info, struct fsw_
 		baby->creator = file_info->creator;
 		baby->crtype = file_info->crtype;
 		baby->ilink = file_info->ilink;
-		fsw_memcpy(baby->extents, &file_info->extents, sizeof file_info->extents);
+		fsw_memcpy(baby->extents, &file_info->extents, sizeof (file_info->extents));
 	}
 
 	*child_dno_out = baby;
