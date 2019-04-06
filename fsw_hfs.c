@@ -159,6 +159,11 @@ static fsw_status_t fsw_hfs_btree_search (
 	fsw_u32 *tuplenum_out
 );
 
+static void hfs_dnode_stuff_info (
+	struct fsw_hfs_dnode *dno,
+	file_info_t *file_info
+);
+
 //
 // Dispatch Table
 //
@@ -1160,6 +1165,30 @@ fsw_hfs_get_extent (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 	return status;
 }
 
+static void
+hfs_dnode_stuff_info (struct fsw_hfs_dnode *dno, file_info_t *file_info)
+{
+	dno->g.size = file_info->size;
+	dno->used_bytes = file_info->used;
+	dno->ctime = file_info->ctime;
+	dno->mtime = file_info->mtime;
+
+	/* Fill-in extents info */
+
+	if (file_info->kind == FSW_DNODE_KIND_FILE) {
+		fsw_memcpy (dno->extents, &file_info->extents, sizeof (file_info->extents));
+	}
+
+	/* Fill-in link file info */
+
+	if (file_info->kind == FSW_DNODE_KIND_SYMLINK) {
+		dno->creator = file_info->creator;
+		dno->crtype = file_info->crtype;
+		dno->ilink = file_info->ilink;
+		fsw_memcpy(dno->extents, &file_info->extents, sizeof (file_info->extents));
+	}
+}
+
 static fsw_status_t
 create_hfs_dnode (struct fsw_hfs_dnode *dno, file_info_t *file_info, struct fsw_hfs_dnode **child_dno_out)
 {
@@ -1168,32 +1197,12 @@ create_hfs_dnode (struct fsw_hfs_dnode *dno, file_info_t *file_info, struct fsw_
 
 	status = fsw_dnode_create (dno->g.vol, dno, file_info->id, file_info->kind, &file_info->name, &baby);
 
-	if (status != FSW_SUCCESS)
-		return status;
-
-	baby->g.size = file_info->size;
-	baby->used_bytes = file_info->used;
-	baby->ctime = file_info->ctime;
-	baby->mtime = file_info->mtime;
-
-	/* Fill-in extents info */
-
-	if (file_info->kind == FSW_DNODE_KIND_FILE) {
-		fsw_memcpy (baby->extents, &file_info->extents, sizeof (file_info->extents));
+	if (status == FSW_SUCCESS) {
+		hfs_dnode_stuff_info(baby, file_info);
+		*child_dno_out = baby;
 	}
 
-	/* Fill-in link file info */
-
-	if (file_info->kind == FSW_DNODE_KIND_SYMLINK) {
-		baby->creator = file_info->creator;
-		baby->crtype = file_info->crtype;
-		baby->ilink = file_info->ilink;
-		fsw_memcpy(baby->extents, &file_info->extents, sizeof (file_info->extents));
-	}
-
-	*child_dno_out = baby;
-
-	return FSW_SUCCESS;
+	return status;
 }
 
 /**
