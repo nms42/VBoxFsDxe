@@ -48,6 +48,20 @@
 
 typedef fsw_u16 btnode_datum_t;
 
+typedef struct {
+  fsw_u32 id;
+  fsw_dnode_kind_t kind;
+  struct fsw_string name;
+  fsw_u32 creator;
+  fsw_u32 crtype;
+  fsw_u32 ilink;
+  fsw_u64 size;
+  fsw_u64 used;
+  fsw_u32 ctime;
+  fsw_u32 mtime;
+  HFSPlusExtentRecord extents;
+} file_info_t;
+
 // functions
 
 static fsw_status_t fsw_hfs_unistr_be2string (
@@ -126,7 +140,7 @@ static void * fsw_hfs_btnode_record_ptr (
 	BTreeKey *currkey
 );
 
-static fsw_status_t fsw_hfs_dnode_fillname (
+static fsw_status_t fsw_hfs_dnode_readinfo (
 	struct fsw_hfs_volume *vol,
 	struct fsw_hfs_dnode *dno
 );
@@ -572,15 +586,10 @@ fsw_hfs_dnode_fill (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
 {
 	fsw_status_t status = FSW_UNKNOWN_ERROR;
 
-	if (fsw_dnode_is_root(&dno->g))
+	if (dno->g.fullinfo)
 		return FSW_SUCCESS;
 
-	if (dno->g.dkind != FSW_DNODE_KIND_UNKNOWN)
-		return FSW_SUCCESS;
-
-	if (fsw_strlen(&dno->g.name) == 0) {
-		status = fsw_hfs_dnode_fillname(vol, dno);
-	}
+	status = fsw_hfs_dnode_readinfo(vol, dno);
 
 	return status;
 }
@@ -827,20 +836,6 @@ fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_
 	return status;
 }
 
-typedef struct {
-  fsw_u32 id;
-  fsw_u32 kind;
-  fsw_u32 creator;
-  fsw_u32 crtype;
-  fsw_u32 ilink;
-  struct fsw_string name;
-  fsw_u64 size;
-  fsw_u64 used;
-  fsw_u32 ctime;
-  fsw_u32 mtime;
-  HFSPlusExtentRecord extents;
-} file_info_t;
-
 static void
 fill_fileinfo (struct fsw_hfs_volume* vol, BTreeKey* btkey, file_info_t* finfo)
 {
@@ -903,7 +898,6 @@ typedef struct {
 	fsw_u32 cur_pos;              /* current position */
 	fsw_u32 parent;
 	struct fsw_hfs_volume *vol;
-
 	struct fsw_shandle *shandle;  /* this one track iterator's state */
 	file_info_t file_info;
 } visitor_parameter_t;
@@ -1217,27 +1211,31 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 {
 	fsw_status_t status;
 	HFSPlusCatalogKey *catkey;
-	fsw_u32 tuplenum;
-	btnode_datum_t *btnode = NULL;
-	HFSPlusCatalogKey *file_key;
-	file_info_t file_info;
-
-	fsw_memzero(&file_info, sizeof (file_info));
 
 	catkey = fsw_hfs_make_catkey((dno->g).dnode_id, lookup_name);
 
 	if (catkey != NULL) {
+		fsw_u32 tuplenum;
+		btnode_datum_t *btnode = NULL;
+
 		status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) catkey, vol->btkey_compare, &btnode, &tuplenum);
 
 		if (status == FSW_SUCCESS) {
+			HFSPlusCatalogKey *file_key;
+			file_info_t file_info;
+
+			fsw_memzero (&file_info, sizeof (file_info));
+
 			file_key = (HFSPlusCatalogKey *) fsw_hfs_btnode_key (&vol->catalog_tree, btnode, tuplenum);
 			fill_fileinfo (vol, (BTreeKey *) file_key, &file_info);
 			status = create_hfs_dnode (dno, &file_info, child_dno_out);
+			fsw_string_mkempty (&file_info.name);
 		}
+
+		fsw_free (btnode);
 	} else
 		status = FSW_OUT_OF_MEMORY;
 
-	fsw_free (btnode);
 	fsw_free (catkey);
 
 	return status;
@@ -1257,15 +1255,17 @@ fsw_hfs_dir_read (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 	fsw_status_t status;
 	struct HFSPlusCatalogKey *catkey;
 	fsw_u32 tuplenum;
-	btnode_datum_t *btnode = NULL;
-	visitor_parameter_t param;
 
 	catkey = fsw_hfs_make_catkey(dno->g.dnode_id, NULL);
 
 	if (catkey != NULL) {
+		btnode_datum_t *btnode = NULL;
+
 		status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) catkey, vol->btkey_compare, &btnode, &tuplenum);
 
 		if (status == FSW_SUCCESS) {
+			visitor_parameter_t param;
+
 			fsw_memzero (&param, sizeof (param));
 
 			/* Iterator updates shand state */
@@ -1277,6 +1277,8 @@ fsw_hfs_dir_read (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 
 			if (status == FSW_SUCCESS)
 				status = create_hfs_dnode (dno, &param.file_info, child_dno_out);
+
+			fsw_string_mkempty (&param.file_info.name);
 		}
 	} else
 		status = FSW_OUT_OF_MEMORY;
@@ -1327,7 +1329,7 @@ fsw_hfs_readlink (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 }
 
 static fsw_status_t
-fsw_hfs_dnode_fillname (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
+fsw_hfs_dnode_readinfo (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
 {
 	fsw_status_t status = FSW_VOLUME_CORRUPTED;
 	btnode_datum_t *btnode = NULL;
@@ -1341,6 +1343,27 @@ fsw_hfs_dnode_fillname (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
 	}
 
 	fsw_free(btnode);
+
+	if (status == FSW_SUCCESS) {
+		struct HFSPlusCatalogKey *catkey = NULL;
+		fsw_u32 tuplenum;
+
+		catkey = fsw_hfs_make_catkey(dno->g.parent_id, &dno->g.name);
+		status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) catkey, vol->btkey_compare, &btnode, &tuplenum);
+
+		if (status == FSW_SUCCESS) {
+			file_info_t file_info;
+
+			fsw_memzero (&file_info, sizeof (file_info));
+			fill_fileinfo(vol, fsw_hfs_btnode_key (&vol->catalog_tree, btnode, tuplenum), &file_info);
+			hfs_dnode_stuff_info (dno, &file_info);
+			dno->g.fullinfo = 1;
+			fsw_string_mkempty (&file_info.name);
+			fsw_free(btnode);
+		}
+
+		fsw_free(catkey);
+	}
 
 	return status;
 }

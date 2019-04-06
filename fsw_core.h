@@ -239,6 +239,7 @@ typedef enum {
 
 struct fsw_dnode {
     fsw_u32     refcount;           //!< Reference count
+    fsw_u32     fullinfo;           //!< Flag to indicate availability of all relevant info
 
     struct VOLSTRUCTNAME *vol;      //!< The volume this dnode belongs to
     struct DNODESTRUCTNAME *parent; //!< Parent directory dnode
