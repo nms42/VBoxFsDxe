@@ -461,7 +461,7 @@ fsw_hfs_volume_mount (struct fsw_hfs_volume *vol)
 		CHECK (status);
 		fsw_memcpy (vol->catalog_tree.btfile->extents,
 					vol->primary_voldesc->catalogFile.extents,
-					sizeof vol->catalog_tree.btfile->extents);
+					sizeof (vol->catalog_tree.btfile->extents));
 		vol->catalog_tree.btfile->g.size =
 		be64_to_cpu (vol->primary_voldesc->catalogFile.logicalSize);
 
@@ -471,7 +471,7 @@ fsw_hfs_volume_mount (struct fsw_hfs_volume *vol)
 		CHECK (status);
 		fsw_memcpy (vol->extents_tree.btfile->extents,
 					vol->primary_voldesc->extentsFile.extents,
-					sizeof vol->extents_tree.btfile->extents);
+					sizeof (vol->extents_tree.btfile->extents));
 		vol->extents_tree.btfile->g.size =
 		be64_to_cpu (vol->primary_voldesc->extentsFile.logicalSize);
 
@@ -837,12 +837,12 @@ typedef struct {
 } file_info_t;
 
 static void
-fill_fileinfo (struct fsw_hfs_volume* vol, HFSPlusCatalogKey* key, file_info_t* finfo)
+fill_fileinfo (struct fsw_hfs_volume* vol, BTreeKey* btkey, file_info_t* finfo)
 {
 	fsw_u8* base;
 	fsw_u16 rec_type;
 
-	base = (fsw_u8 *) fsw_hfs_btnode_record_ptr ((BTreeKey *) key);
+	base = (fsw_u8 *) fsw_hfs_btnode_record_ptr (btkey);
 	rec_type = be16_to_cpu (*(fsw_u16 *) base);
 
 	/** @todo: read additional info */
@@ -904,19 +904,18 @@ typedef struct {
 } visitor_parameter_t;
 
 static int
-fsw_hfs_btree_visit_node (BTreeKey *btkey, void *param)
+fsw_hfs_btnode_visit_record (BTreeKey *btkey, void *param)
 {
 	visitor_parameter_t *vp = (visitor_parameter_t *) param;
+	struct HFSPlusCatalogKey *cat_key = (HFSPlusCatalogKey *) btkey;
 	fsw_u8 *base = (fsw_u8 *) fsw_hfs_btnode_record_ptr (btkey);
 	fsw_u16 rec_type = be16_to_cpu (*(fsw_u16 *) base);
-	struct HFSPlusCatalogKey *cat_key = (HFSPlusCatalogKey *) btkey;
 
 	if (be32_to_cpu (cat_key->parentID) != vp->parent)
 		return -1;
 
 	vp->file_info.kind = FSW_DNODE_KIND_UNKNOWN;
 
-	/* not smth we care about */
 
 	if (vp->shandle->pos != vp->cur_pos++)
 		return 0;
@@ -924,14 +923,14 @@ fsw_hfs_btree_visit_node (BTreeKey *btkey, void *param)
 	switch (rec_type) {
 		case kHFSPlusFolderThreadRecord:
 		case kHFSPlusFileThreadRecord:
-			vp->shandle->pos++;
+			vp->shandle->pos++; /* not smth we care about, skip it */
 			return 0;
 
 		default:
 			break;
 	}
 
-	fill_fileinfo (vp->vol, cat_key, &vp->file_info);
+	fill_fileinfo (vp->vol, (BTreeKey *) cat_key, &vp->file_info);
 	(void) fsw_hfs_unistr_be2string(&vp->file_info.name, FSW_STRING_KIND_UTF16, &cat_key->nodeName);	/* XXX: (void)? */
 	vp->shandle->pos++;
 
@@ -939,7 +938,7 @@ fsw_hfs_btree_visit_node (BTreeKey *btkey, void *param)
 }
 
 static fsw_status_t
-fsw_hfs_btree_iterate_btnode (struct fsw_hfs_btree *btree, btnode_datum_t *first_btnode, fsw_u32 first_tuplenum, int (*callback) (BTreeKey *record, void *param), void *param)
+fsw_hfs_btnode_iterate_records (struct fsw_hfs_btree *btree, btnode_datum_t *first_btnode, fsw_u32 first_tuplenum, int (*callback) (BTreeKey *record, void *param), void *param)
 {
 	fsw_status_t status;
 
@@ -1211,12 +1210,10 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 	HFSPlusCatalogKey *catkey;
 	fsw_u32 tuplenum;
 	btnode_datum_t *btnode = NULL;
-	struct fsw_string rec_name;
 	HFSPlusCatalogKey *file_key;
 	file_info_t file_info;
 
-	fsw_memzero(&rec_name, sizeof(rec_name));
-	fsw_memzero(&file_info, sizeof file_info);
+	fsw_memzero(&file_info, sizeof (file_info));
 
 	catkey = fsw_hfs_make_catkey((dno->g).dnode_id, lookup_name);
 
@@ -1225,7 +1222,7 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 
 		if (status == FSW_SUCCESS) {
 			file_key = (HFSPlusCatalogKey *) fsw_hfs_btnode_key (&vol->catalog_tree, btnode, tuplenum);
-			fill_fileinfo (vol, file_key, &file_info);
+			fill_fileinfo (vol, (BTreeKey *) file_key, &file_info);
 			status = create_hfs_dnode (dno, &file_info, child_dno_out);
 		}
 	} else
@@ -1267,13 +1264,15 @@ fsw_hfs_dir_read (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 			param.vol = vol;
 			param.shandle = shand;
 			param.parent = dno->g.dnode_id;
-			status = fsw_hfs_btree_iterate_btnode (&vol->catalog_tree, btnode, tuplenum, fsw_hfs_btree_visit_node, &param);
+			status = fsw_hfs_btnode_iterate_records (&vol->catalog_tree, btnode, tuplenum, fsw_hfs_btnode_visit_record, &param);
 
 			if (status == FSW_SUCCESS)
 				status = create_hfs_dnode (dno, &param.file_info, child_dno_out);
 		}
 	} else
 		status = FSW_OUT_OF_MEMORY;
+
+	fsw_free(catkey);
 
 	return status;
 }
