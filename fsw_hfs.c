@@ -939,7 +939,7 @@ fsw_hfs_btree_visit_node (BTreeKey *btkey, void *param)
 }
 
 static fsw_status_t
-fsw_hfs_btree_iterate_node (struct fsw_hfs_btree *btree, btnode_datum_t *first_btnode, fsw_u32 first_tuplenum, int (*callback) (BTreeKey *record, void *param), void *param)
+fsw_hfs_btree_iterate_btnode (struct fsw_hfs_btree *btree, btnode_datum_t *first_btnode, fsw_u32 first_tuplenum, int (*callback) (BTreeKey *record, void *param), void *param)
 {
 	fsw_status_t status;
 
@@ -951,7 +951,7 @@ fsw_hfs_btree_iterate_node (struct fsw_hfs_btree *btree, btnode_datum_t *first_b
 	for (;;) {
 		fsw_u32 i;
 		fsw_u32 count = be16_to_cpu (btnode->numRecords);
-		fsw_u32 next_node;
+		fsw_u32 next_btnode;
 
 		/* Iterate over all records in this node */
 
@@ -970,14 +970,14 @@ fsw_hfs_btree_iterate_node (struct fsw_hfs_btree *btree, btnode_datum_t *first_b
 			/* if callback returned 0 - continue */
 		}
 
-		next_node = be32_to_cpu (btnode->fLink);
+		next_btnode = be32_to_cpu (btnode->fLink);
 
-		if (next_node == 0) {
+		if (next_btnode == 0) {
 			status = FSW_NOT_FOUND;
 			break;
 		}
 
-		status = fsw_hfs_btree_read_node (btree, next_node, &rawbtnode);
+		status = fsw_hfs_btree_read_node (btree, next_btnode, &rawbtnode);
 
 		if (status != FSW_SUCCESS)
 			break;
@@ -1267,7 +1267,7 @@ fsw_hfs_dir_read (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 			param.vol = vol;
 			param.shandle = shand;
 			param.parent = dno->g.dnode_id;
-			status = fsw_hfs_btree_iterate_node (&vol->catalog_tree, btnode, tuplenum, fsw_hfs_btree_visit_node, &param);
+			status = fsw_hfs_btree_iterate_btnode (&vol->catalog_tree, btnode, tuplenum, fsw_hfs_btree_visit_node, &param);
 
 			if (status == FSW_SUCCESS)
 				status = create_hfs_dnode (dno, &param.file_info, child_dno_out);
