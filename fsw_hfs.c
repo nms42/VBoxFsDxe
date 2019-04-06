@@ -50,10 +50,15 @@ typedef fsw_u16 btnode_datum_t;
 
 // functions
 
-static fsw_status_t fsw_hfs_unistr2string (
+static fsw_status_t fsw_hfs_unistr_be2string (
 	struct fsw_string* fs,
 	fsw_string_kind_t fskind,
 	HFSUniStr255* us
+);
+
+static fsw_status_t fsw_hfs_string2unistr (
+	HFSUniStr255* us,
+	struct fsw_string* fs
 );
 
 static fsw_status_t fsw_hfs_volume_mount (
@@ -177,7 +182,7 @@ struct fsw_fstype_table FSW_FSTYPE_TABLE_NAME (
 };
 
 static fsw_status_t
-fsw_hfs_unistr2string(struct fsw_string* fs, fsw_string_kind_t fskind, HFSUniStr255* us)
+fsw_hfs_unistr_be2string(struct fsw_string* fs, fsw_string_kind_t fskind, HFSUniStr255* us)
 {
 	fsw_u16 uslen;
 	struct fsw_string ws;
@@ -186,6 +191,24 @@ fsw_hfs_unistr2string(struct fsw_string* fs, fsw_string_kind_t fskind, HFSUniStr
 	fsw_string_setter(&ws, FSW_STRING_KIND_UTF16_BE, uslen, sizeof(fsw_u16) * uslen, us->unicode);
 
 	return fsw_strdup_coerce(fs, fskind, &ws);
+}
+
+static fsw_status_t
+fsw_hfs_string2unistr(HFSUniStr255* us, struct fsw_string* fs)
+{
+	fsw_status_t status;
+	struct fsw_string ws;
+
+	status = fsw_strdup_coerce(&ws, FSW_STRING_KIND_UTF16, fs);
+
+	if (status == FSW_SUCCESS) {
+		us->length = fsw_strlen(&ws);
+		fsw_memcpy(us->unicode, fsw_strchars(&ws), fsw_strsize(&ws));
+	}
+
+	fsw_string_mkempty (&ws);	/* Free memory used for chars */
+
+	return status;
 }
 
 static fsw_s32
@@ -337,7 +360,7 @@ fsw_hfs_volume_catalog_setup (struct fsw_hfs_volume *vol)
 		HFSPlusCatalogThread *tr;
 
 		tr = (HFSPlusCatalogThread *) fsw_hfs_btnode_record_ptr (fsw_hfs_btnode_key (&vol->catalog_tree, btnode, tuplenum));
-		status = fsw_hfs_unistr2string(&vol->g.label, vol->g.host_string_kind, &tr->nodeName);
+		status = fsw_hfs_unistr_be2string(&vol->g.label, vol->g.host_string_kind, &tr->nodeName);
 	} else
 		status = FSW_VOLUME_CORRUPTED;
 
@@ -765,7 +788,7 @@ typedef struct {
   fsw_u32 creator;
   fsw_u32 crtype;
   fsw_u32 ilink;
-  struct fsw_string *name;
+  struct fsw_string name;
   fsw_u64 size;
   fsw_u64 used;
   fsw_u32 ctime;
@@ -848,10 +871,6 @@ fsw_hfs_btree_visit_node (BTreeKey *btkey, void *param)
 	fsw_u8 *base = (fsw_u8 *) fsw_hfs_btnode_record_ptr (btkey);
 	fsw_u16 rec_type = be16_to_cpu (*(fsw_u16 *) base);
 	struct HFSPlusCatalogKey *cat_key = (HFSPlusCatalogKey *) btkey;
-	fsw_u16 name_len;
-	fsw_u16 *name_ptr;
-	fsw_u32 i;
-	struct fsw_string *file_name;
 
 	if (be32_to_cpu (cat_key->parentID) != vp->parent)
 		return -1;
@@ -874,22 +893,7 @@ fsw_hfs_btree_visit_node (BTreeKey *btkey, void *param)
 	}
 
 	fill_fileinfo (vp->vol, cat_key, &vp->file_info);
-
-	// TODO: code below looks untidy
-
-	name_len = be16_to_cpu (cat_key->nodeName.length);
-
-	file_name = vp->file_info.name;
-	file_name->len = name_len;
-	fsw_memdup (&file_name->data, &cat_key->nodeName.unicode[0], 2 * name_len);
-	file_name->size = 2 * name_len;
-	file_name->skind = FSW_STRING_KIND_UTF16;
-	name_ptr = (fsw_u16 *) file_name->data;
-
-	for (i = 0; i < name_len; i++) {
-		name_ptr[i] = be16_to_cpu (name_ptr[i]);
-	}
-
+	(void) fsw_hfs_unistr_be2string(&vp->file_info.name, FSW_STRING_KIND_UTF16, &cat_key->nodeName);	/* XXX: (void)? */
 	vp->shandle->pos++;
 
 	return 1;
@@ -1124,7 +1128,7 @@ create_hfs_dnode (struct fsw_hfs_dnode *dno, file_info_t *file_info, struct fsw_
 	fsw_status_t status;
 	struct fsw_hfs_dnode *baby;
 
-	status = fsw_dnode_create (dno->g.vol, dno, file_info->id, file_info->kind, file_info->name, &baby);
+	status = fsw_dnode_create (dno->g.vol, dno, file_info->id, file_info->kind, &file_info->name, &baby);
 
 	if (status != FSW_SUCCESS)
 		return status;
@@ -1176,42 +1180,18 @@ fsw_hfs_dir_lookup (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 	fsw_memzero(&file_info, sizeof file_info);
 	fsw_memzero(&catkey, sizeof(catkey));
 
-	file_info.name = &rec_name;
-
 	catkey.parentID = (dno->g).dnode_id;
-	catkey.nodeName.length = (fsw_u16) fsw_strlen(lookup_name);
-
-	if (lookup_name->skind == FSW_STRING_KIND_UTF16) {
-		/* no need to allocate anything */
-		rec_name = *lookup_name;
-	} else {
-		status = fsw_strdup_coerce (&rec_name, FSW_STRING_KIND_UTF16, lookup_name);
-
-		/* nothing allocated so far */
-
-		if (status != FSW_SUCCESS)
-			goto done;
-	}
-
-	fsw_memcpy (catkey.nodeName.unicode, rec_name.data, fsw_strsize(&rec_name));
-
-	catkey.keyLength = (fsw_u16) (6 + rec_name.size);	// XXX?
+	(void) fsw_hfs_string2unistr(&catkey.nodeName, lookup_name);
 
 	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey, vol->btkey_compare, &btnode, &tuplenum);
 
-	if (status != FSW_SUCCESS)
-		goto done;
-
-	file_key = (HFSPlusCatalogKey *) fsw_hfs_btnode_key (&vol->catalog_tree, btnode, tuplenum);
-
-	fill_fileinfo (vol, file_key, &file_info);
-
-	status = create_hfs_dnode (dno, &file_info, child_dno_out);
-
-done:
+	if (status == FSW_SUCCESS) {
+		file_key = (HFSPlusCatalogKey *) fsw_hfs_btnode_key (&vol->catalog_tree, btnode, tuplenum);
+		fill_fileinfo (vol, file_key, &file_info);
+		status = create_hfs_dnode (dno, &file_info, child_dno_out);
+	}
 
 	fsw_free (btnode);
-	fsw_string_mkempty (&rec_name);
 
 	return status;
 }
@@ -1232,7 +1212,6 @@ fsw_hfs_dir_read (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 	fsw_u32 tuplenum;
 	btnode_datum_t *btnode = NULL;
 	visitor_parameter_t param;
-	struct fsw_string rec_name;
 
 	fsw_memzero(&catkey, sizeof(catkey));
 	catkey.parentID = dno->g.dnode_id;
@@ -1240,9 +1219,7 @@ fsw_hfs_dir_read (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 	status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) &catkey, vol->btkey_compare, &btnode, &tuplenum);
 
 	if (status == FSW_SUCCESS) {
-		fsw_memzero (&rec_name, sizeof (rec_name));
 		fsw_memzero (&param, sizeof (param));
-		param.file_info.name = &rec_name;
 
 		/* Iterator updates shand state */
 
@@ -1255,8 +1232,6 @@ fsw_hfs_dir_read (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 		if (status == FSW_SUCCESS)
 			status = create_hfs_dnode (dno, &param.file_info, child_dno_out);
 	}
-
-	fsw_string_mkempty(&rec_name);
 
 	return status;
 }
@@ -1319,7 +1294,7 @@ fsw_hfs_dnode_fillname (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
 
 		tr = (HFSPlusCatalogThread *) fsw_hfs_btnode_record_ptr (fsw_hfs_btnode_key (&vol->catalog_tree, btnode, tuplenum));
 		dno->g.parent_id = be32_to_cpu(tr->parentID);
-		status = fsw_hfs_unistr2string(&dno->g.name, vol->g.host_string_kind, &tr->nodeName);
+		status = fsw_hfs_unistr_be2string(&dno->g.name, vol->g.host_string_kind, &tr->nodeName);
 	}
 
 	return status;
