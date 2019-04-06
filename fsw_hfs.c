@@ -1226,7 +1226,6 @@ fsw_hfs_dir_read (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 		param.vol = vol;
 		param.shandle = shand;
 		param.parent = dno->g.dnode_id;
-		param.cur_pos = 0;
 		status = fsw_hfs_btree_iterate_node (&vol->catalog_tree, btnode, tuplenum, fsw_hfs_btree_visit_node, &param);
 
 		if (status == FSW_SUCCESS)
