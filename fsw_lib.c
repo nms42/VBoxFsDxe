@@ -476,7 +476,7 @@ fsw_status_t fsw_strdup_coerce(struct fsw_string *dest, fsw_string_kind_t kind, 
 {
     fsw_status_t    status;
 
-    if (src->skind == FSW_STRING_KIND_EMPTY || src->len == 0) {
+    if (src == NULL || src->skind == FSW_STRING_KIND_EMPTY || src->len == 0) {
         fsw_string_setter(dest, kind, 0, 0, NULL);
         return FSW_SUCCESS;
     }
