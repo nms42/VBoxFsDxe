@@ -122,19 +122,23 @@ VOID fsw_efi_decode_time(OUT EFI_TIME *EfiTime, IN UINT32 UnixTime)
 
 UINTN fsw_efi_strsize(struct fsw_string *s)
 {
-    if (s->skind == FSW_STRING_KIND_EMPTY)
-        return sizeof(CHAR16);
-    return (s->len + 1) * sizeof(CHAR16);
+    return fsw_strsize(s);
 }
 
 VOID fsw_efi_strcpy(CHAR16 *Dest, struct fsw_string *src)
 {
     Dest[fsw_strlen(s)] = 0;
 
-    if (fsw_strkind(src) == FSW_STRING_KIND_UTF16) {
+    switch (fsw_strkind(src)) {
+    default:
+        break;
+
+    case FSW_STRING_KIND_UTF16:
+        /* FALLTHROUGH */
+
+    case FSW_STRING_KIND_UTF16_LE:
         CopyMem(Dest, fsw_strchars(src), fsw_strsize(src));
-    } else {
-        // TODO: coerce, recurse
+        break;
     }
 }
 
