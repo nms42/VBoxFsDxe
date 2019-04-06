@@ -728,7 +728,7 @@ fsw_status_t fsw_dnode_lookup(struct fsw_dnode *dno,
         child_dno = dno;
         fsw_dnode_retain(child_dno);
     } else if (fsw_streq_cstr(lookup_name, "..")) {   // parent directory
-        if (dno->parent == NULL) {
+        if (fsw_dnode_is_root(dno)) {
             // We cannot go up from the root directory. Caution: Certain apps like the EFI shell
             // rely on this behaviour!
             status = FSW_NOT_FOUND;
@@ -963,7 +963,7 @@ fsw_status_t fsw_dnode_resolve(struct fsw_dnode *dno, struct fsw_dnode **target_
 
             return FSW_SUCCESS;
         }
-        if (dno->parent == NULL) {    // safety measure, cannot happen in theory
+        if (dno->parent == NULL) {    // XXX: ??? safety measure, cannot happen in theory
             status = FSW_NOT_FOUND;
             goto errorexit;
         }
