@@ -93,7 +93,7 @@ id2path(struct fsw_posix_volume *pvol, char *idnum)
     fprintf(outfile, "Path for #%u is ", dnid);
 
     for (pe = path; pe != NULL; pe = pe->flink) {
-	fprintf(outfile, "/%*s", fsw_strlen(pe->str), (char *) pe->str->data);
+	fprintf(outfile, "/%*s", fsw_strlen(pe->str), (char *) fsw_strchars(&pe->str));
     }
 
     fprintf(outfile, "\n");
