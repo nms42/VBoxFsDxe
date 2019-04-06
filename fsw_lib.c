@@ -97,7 +97,7 @@ fsw_status_t fsw_memdup(void **dest_out, void *src, int len)
 
 int fsw_strlen(struct fsw_string *s)
 {
-    if (s->skind == FSW_STRING_KIND_EMPTY)
+    if (s == NULL || s->skind == FSW_STRING_KIND_EMPTY)
         return 0;
 
     return s->len;
@@ -109,7 +109,7 @@ int fsw_strlen(struct fsw_string *s)
 
 int fsw_strsize(struct fsw_string *s)
 {
-    if (s->skind == FSW_STRING_KIND_EMPTY)
+    if (s == NULL || s->skind == FSW_STRING_KIND_EMPTY)
         return 0;
 
     return s->size;
@@ -121,7 +121,7 @@ int fsw_strsize(struct fsw_string *s)
 
 void * fsw_strchars(struct fsw_string *s)
 {
-    if (s->skind == FSW_STRING_KIND_EMPTY)
+    if (s == NULL || s->skind == FSW_STRING_KIND_EMPTY)
         return NULL;
 
     return (void *) s->data;
@@ -133,6 +133,9 @@ void * fsw_strchars(struct fsw_string *s)
 
 fsw_string_kind_t fsw_strkind(struct fsw_string *s)
 {
+    if (s == NULL)
+	   return FSW_STRING_KIND_EMPTY;
+
     return s->skind;
 }
 
