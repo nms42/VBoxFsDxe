@@ -122,21 +122,21 @@ VOID fsw_efi_decode_time(OUT EFI_TIME *EfiTime, IN UINT32 UnixTime)
 
 UINTN fsw_efi_strsize(struct fsw_string *s)
 {
-    return fsw_strsize(s);
+    return (fsw_strlen(s) + 1) * sizeof (CHAR16);
 }
 
 VOID fsw_efi_strcpy(CHAR16 *Dest, struct fsw_string *src)
 {
-    Dest[fsw_strlen(src)] = 0;
-
     switch (fsw_strkind(src)) {
     default:
         break;
 
     case FSW_STRING_KIND_UTF16:
-        CopyMem(Dest, fsw_strchars(src), fsw_strsize(src));
+        CopyMem(Dest, fsw_strchars(src), fsw_efi_strsize(src));
         break;
     }
+
+    Dest[fsw_strlen(src)] = 0;
 }
 
 #ifdef VBOX
