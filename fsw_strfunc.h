@@ -66,7 +66,7 @@ static int fsw_streq_ISO88591_UTF16_SWAPPED(void *s1data, void *s2data, int len)
     int i;
     fsw_u8 *p1 = (fsw_u8 *)s1data;
     fsw_u16 *p2 = (fsw_u16 *)s2data;
-    fsw_u32 c1, c2;
+    fsw_u16 c1, c2;
     
     for (i = 0; i < len; i++) {
         c1 = *p1++;
@@ -108,7 +108,7 @@ static int fsw_streq_UTF8_UTF16_SWAPPED(void *s1data, void *s2data, int len)
     int i;
     fsw_u8 *p1 = (fsw_u8 *)s1data;
     fsw_u16 *p2 = (fsw_u16 *)s2data;
-    fsw_u32 c1, c2;
+    fsw_u16 c1, c2;
     
     for (i = 0; i < len; i++) {
         c1 = *p1++;
@@ -134,7 +134,7 @@ static int fsw_streq_UTF16_UTF16_SWAPPED(void *s1data, void *s2data, int len)
     int i;
     fsw_u16 *p1 = (fsw_u16 *)s1data;
     fsw_u16 *p2 = (fsw_u16 *)s2data;
-    fsw_u32 c1, c2;
+    fsw_u16 c1, c2;
     
     for (i = 0; i < len; i++) {
         c1 = *p1++;
@@ -205,7 +205,7 @@ static fsw_status_t fsw_strcoerce_UTF16_SWAPPED_ISO88591(void *srcdata, int srcl
     int             i;
     fsw_u16       *sp;
     fsw_u8       *dp;
-    fsw_u32         c;
+    fsw_u16         c;
     
     fsw_string_setter(dest, FSW_STRING_KIND_ISO88591, srclen, srclen * sizeof(fsw_u8), NULL);
     status = fsw_alloc(dest->size, &dest->data);
@@ -281,7 +281,7 @@ static fsw_status_t fsw_strcoerce_UTF16_SWAPPED_UTF16(void *srcdata, int srclen,
     int             i;
     fsw_u16       *sp;
     fsw_u16       *dp;
-    fsw_u32         c;
+    fsw_u16         c;
     
     fsw_string_setter(dest, FSW_STRING_KIND_UTF16, srclen, srclen * sizeof(fsw_u16), NULL);
     status = fsw_alloc(dest->size, &dest->data);
@@ -416,7 +416,7 @@ static fsw_status_t fsw_strcoerce_UTF16_SWAPPED_UTF8(void *srcdata, int srclen, 
     sp = (fsw_u16 *)srcdata;
     destsize = 0;
     for (i = 0; i < srclen; i++) {
-        c = *sp++; c = FSW_SWAPVALUE_U16(c);
+        c = *sp++; c = FSW_SWAPVALUE_U32(c);
         
         if (c < 0x000080)
             destsize++;
@@ -438,7 +438,8 @@ static fsw_status_t fsw_strcoerce_UTF16_SWAPPED_UTF8(void *srcdata, int srclen, 
     sp = (fsw_u16 *)srcdata;
     dp = (fsw_u8 *)dest->data;
     for (i = 0; i < srclen; i++) {
-        c = *sp++; c = FSW_SWAPVALUE_U16(c);
+        c = *sp++;
+	c = FSW_SWAPVALUE_U32(c);
         
         if (c < 0x000080) {
             *dp++ = (fsw_u8)c;

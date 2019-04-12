@@ -93,11 +93,11 @@ typedef fsw_u32             fsw_u32_be;
 typedef fsw_u64             fsw_u64_le;
 typedef fsw_u64             fsw_u64_be;
 
-#define FSW_SWAPVALUE_U16(v) bswap16(v)
+#define FSW_SWAPVALUE_U16(v) ((fsw_u16) bswap16(v))
 
-#define FSW_SWAPVALUE_U32(v) bswap32(v)
+#define FSW_SWAPVALUE_U32(v) ((fsw_u32) bswap32(v))
 
-#define FSW_SWAPVALUE_U64(v) bswap64(v)
+#define FSW_SWAPVALUE_U64(v) ((fsw_u64) bswap64(v))
 
 /*@}*/
 

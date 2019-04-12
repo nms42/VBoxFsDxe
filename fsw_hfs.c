@@ -222,7 +222,7 @@ fsw_hfs_string2unistr(HFSUniStr255* us, struct fsw_string* fs)
 	status = fsw_strdup_coerce(&ws, FSW_STRING_KIND_UTF16, fs);
 
 	if (status == FSW_SUCCESS) {
-		if ((us->length = fsw_strlen(&ws)) > 0)
+		if ((us->length = (fsw_u16) fsw_strlen(&ws)) > 0)
 			fsw_memcpy(us->unicode, fsw_strchars(&ws), fsw_strsize(&ws));
 	}
 
@@ -234,11 +234,11 @@ fsw_hfs_string2unistr(HFSUniStr255* us, struct fsw_string* fs)
 static HFSPlusCatalogKey *
 fsw_hfs_make_catkey(fsw_u32 pid, struct fsw_string *str) {
 	fsw_status_t sts = FSW_SUCCESS;
-	fsw_u32 cklen;
+	fsw_u16 cklen;
 	HFSPlusCatalogKey *ck = NULL;
 
 	cklen = sizeof (ck->parentID) + sizeof (ck->nodeName.length);
-	cklen += fsw_strlen(str) * sizeof (ck->nodeName.unicode[0]);
+	cklen += (fsw_u16) (fsw_strlen(str) * sizeof (ck->nodeName.unicode[0]));
 	sts = fsw_alloc_zero(cklen + sizeof (ck->keyLength), (void **) &ck);
 
 	if (sts == FSW_SUCCESS) {
