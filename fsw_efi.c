@@ -668,6 +668,18 @@ fsw_efi_FileHandle_Open (
   return Status;
 }
 
+EFI_STATUS EFIAPI
+fsw_efi_FileHandle_OpenEx (
+  IN EFI_FILE_PROTOCOL            *This,
+  OUT EFI_FILE_PROTOCOL          **NewHandle,
+  IN CHAR16                       *FileName,
+  IN UINT64                        OpenMode,
+  IN UINT64                        Attributes,
+  IN OUT EFI_FILE_IO_TOKEN        *Token)
+{
+  return fsw_efi_FileHandle_Open(This, NewHandle, FileName, OpenMode, Attributes);
+}
+
 /**
  * File Handle EFI protocol, Close function. Closes the FSW shandle
  * and frees the memory used for the structure.
@@ -737,6 +749,15 @@ fsw_efi_FileHandle_Read (
   return Status;
 }
 
+EFI_STATUS EFIAPI
+fsw_efi_FileHandle_ReadEx (
+  IN EFI_FILE_PROTOCOL *This,
+  IN OUT EFI_FILE_IO_TOKEN *Token
+)
+{
+  return fsw_efi_FileHandle_Read(This, &Token->BufferSize, Token->Buffer);
+};
+
 /**
  * File Handle EFI protocol, Write function. Returns unsupported status
  * because this driver is read-only.
@@ -752,6 +773,15 @@ fsw_efi_FileHandle_Write (
   // this driver is read-only
 
   return EFI_WRITE_PROTECTED;
+}
+
+EFI_STATUS EFIAPI
+fsw_efi_FileHandle_WriteEx (
+  IN EFI_FILE_PROTOCOL *This,
+  IN OUT EFI_FILE_IO_TOKEN *Token
+)
+{
+    return fsw_efi_FileHandle_Write(This, &Token->BufferSize, Token->Buffer);
 }
 
 /**
@@ -860,6 +890,15 @@ fsw_efi_FileHandle_Flush (
   return EFI_WRITE_PROTECTED;
 }
 
+EFI_STATUS EFIAPI
+fsw_efi_FileHandle_FlushEx (
+  IN EFI_FILE_PROTOCOL *This,
+  IN OUT EFI_FILE_IO_TOKEN *Token
+)
+{
+  return fsw_efi_FileHandle_Flush(This);
+}
+
 /**
  * Set up a file handle for a dnode. This function allocates a data structure
  * for a file handle, opens a FSW shandle and populates the EFI_FILE structure
@@ -924,6 +963,10 @@ fsw_efi_dnode_to_FileHandle (
   File->FileHandle.GetInfo = fsw_efi_FileHandle_GetInfo;
   File->FileHandle.SetInfo = fsw_efi_FileHandle_SetInfo;
   File->FileHandle.Flush = fsw_efi_FileHandle_Flush;
+  File->FileHandle.OpenEx = fsw_efi_FileHandle_OpenEx;
+  File->FileHandle.ReadEx = fsw_efi_FileHandle_ReadEx;
+  File->FileHandle.WriteEx = fsw_efi_FileHandle_WriteEx;
+  File->FileHandle.FlushEx = fsw_efi_FileHandle_FlushEx;
 
   *NewFileHandle = &File->FileHandle;
   Status = EFI_SUCCESS;
