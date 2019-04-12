@@ -183,7 +183,8 @@ struct fsw_string_list {
 typedef enum {
 	HFS_BLESS_SYSFLDR = 0,
 	HFS_BLESS_SYSFILE = 1,
-	HFS_BLESS_ALTOS = 3
+	HFS_BLESS_OSXFLDR = 5,
+
 } fsw_hfs_bless_kind_t;
 
 /* forward declarations */

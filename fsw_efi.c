@@ -70,7 +70,7 @@
 
 #define FSW_EFI_DRIVER_NAME(t) L"Fsw " FSW_EFI_STRINGIFY(t) L" File System Driver"
 
-EFI_GUID gAppleBlessedAlternateOsInfoGuid = APPLE_BLESSED_ALTERNATE_OS_INFO_GUID;
+EFI_GUID gAppleBlessedOsxFolderInfoGuid = APPLE_BLESSED_OSX_FOLDER_INFO_GUID;
 EFI_GUID gAppleBlessedSystemFileInfoGuid = APPLE_BLESSED_SYSTEM_FILE_INFO_GUID;
 EFI_GUID gAppleBlessedSystemFolderInfoGuid = APPLE_BLESSED_SYSTEM_FOLDER_INFO_GUID;
 
@@ -664,6 +664,7 @@ fsw_efi_FileHandle_Open (
 
   // not supported for regular files
 
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with (%r) for {%s} kind %d, handle %p\n"), __FUNCTION__, Status, FileName, (int) File->Type, This));
   return Status;
 }
 
@@ -683,6 +684,7 @@ fsw_efi_FileHandle_Close (
   fsw_shandle_close (&File->shand);
   FreePool (File);
 
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: handle %p\n"), __FUNCTION__, This));
   return EFI_SUCCESS;
 }
 
@@ -884,6 +886,7 @@ fsw_efi_dnode_to_FileHandle (
   // check type
 
   if (dno->dkind != FSW_DNODE_KIND_FILE && dno->dkind != FSW_DNODE_KIND_DIR) {
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unknown kind %d\n"), __FUNCTION__, (int) dno->dkind));
     Status = EFI_UNSUPPORTED;
     goto Done;
   }
@@ -1205,11 +1208,13 @@ fsw_efi_dnode_getinfo (
   UINTN RequiredSize;
   struct fsw_volume_stat vsb;
 
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: Incoming request (guid %g)\n"), __FUNCTION__, InformationType));
+
   Volume = (FSW_VOLUME_DATA *) File->shand.dnode->vol->host_data;
 
-  if (CompareGuid (InformationType, &GUID_NAME (FileInfo))) {
+  if (CompareGuid (InformationType, &GUID_NAME (FileInfo))) {	// ------
     Status = fsw_efi_dnode_fill_FileInfo (Volume, File->shand.dnode, BufferSize, Buffer);
-  } else if (CompareGuid (InformationType, &GUID_NAME (FileSystemInfo))) {
+  } else if (CompareGuid (InformationType, &GUID_NAME (FileSystemInfo))) {	// ------
 
     // check buffer size
 
@@ -1245,7 +1250,10 @@ fsw_efi_dnode_getinfo (
 
     *BufferSize = RequiredSize;
     Status = EFI_SUCCESS;
-  } else if (CompareGuid (InformationType, &GUID_NAME (FileSystemVolumeLabelInfoId))) {
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: volume label [%s] for (guid %g)\n"), __FUNCTION__,
+			    FSInfo->VolumeLabel,
+			    InformationType));
+  } else if (CompareGuid (InformationType, &GUID_NAME (FileSystemVolumeLabelInfoId))) {	// ------
 
     // check buffer size
 
@@ -1265,18 +1273,32 @@ fsw_efi_dnode_getinfo (
 
     *BufferSize = RequiredSize;
     Status = EFI_SUCCESS;
-  } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFileInfo))) {
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: volume label [%s] for (guid %g)\n"), __FUNCTION__,
+			    (CHAR16 *) Buffer,
+			    InformationType));
+  } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFileInfo))) {		// ------
     Status = fsw_efi_bless_info (Volume, HFS_BLESS_SYSFILE, Buffer, BufferSize);
-  } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFolderInfo))) {
+  } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFolderInfo))) {	// ------
     Status = fsw_efi_bless_info (Volume, HFS_BLESS_SYSFLDR, Buffer, BufferSize);
-  } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedAlternateOsInfo))) {
-    Status = fsw_efi_bless_info (Volume, HFS_BLESS_ALTOS, Buffer, BufferSize);
+  } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedOsxFolderInfo))) {	// ------
+    Status = fsw_efi_bless_info (Volume, HFS_BLESS_OSXFLDR, Buffer, BufferSize);
   } else {
     FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: Unsupported request (guid %g)\n"), __FUNCTION__, InformationType));
     Status = EFI_UNSUPPORTED;
   }
 
 Done:
+
+  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with (%r), buffer size %d\n"), __FUNCTION__, Status, *BufferSize));
+  if (!EFI_ERROR (Status)) {
+    for (int i = 0; i < *BufferSize; i++) {
+      if (i > 0 && (i % 32) == 0)
+        FSW_MSG_DEBUGV ((FSW_MSGSTR ("\n")));
+      FSW_MSG_DEBUGV ((FSW_MSGSTR (" %02X"), ((CHAR8 *) Buffer)[i]));
+    }
+    FSW_MSG_DEBUGV ((FSW_MSGSTR ("\n")));
+  }
+
   return Status;
 }
 
@@ -1390,7 +1412,7 @@ fsw_efi_dnode_fill_FileInfo (
 
   FileInfo->Size = RequiredSize;
   FileInfo->FileSize = dno->size;
-  FileInfo->Attribute = 0;
+  FileInfo->Attribute = EFI_FILE_READ_ONLY;
 
   if (dno->dkind == FSW_DNODE_KIND_DIR)
     FileInfo->Attribute |= EFI_FILE_DIRECTORY;
