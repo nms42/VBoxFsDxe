@@ -407,55 +407,56 @@ static fsw_status_t fsw_strcoerce_UTF16_UTF8(void *srcdata, int srclen, struct f
 
 static fsw_status_t fsw_strcoerce_UTF16_SWAPPED_UTF8(void *srcdata, int srclen, struct fsw_string *dest)
 {
-    fsw_status_t    status;
-    int             i, destsize;
-    fsw_u16       *sp;
-    fsw_u8       *dp;
-    fsw_u32         c;
-    
-    sp = (fsw_u16 *)srcdata;
-    destsize = 0;
-    for (i = 0; i < srclen; i++) {
-        c = *sp++; c = FSW_SWAPVALUE_U32(c);
-        
-        if (c < 0x000080)
-            destsize++;
-        else if (c < 0x000800)
-            destsize += 2;
-        else if (c < 0x010000)
-            destsize += 3;
-        else
-            destsize += 4;
-    }
-    
-    fsw_string_setter(dest, FSW_STRING_KIND_UTF8, srclen, destsize, NULL);
-    if (destsize < 1)
-        return FSW_SUCCESS;
-    status = fsw_alloc(dest->size, &dest->data);
-    if (status != FSW_SUCCESS)
-        return status;
-    
-    sp = (fsw_u16 *)srcdata;
-    dp = (fsw_u8 *)dest->data;
-    for (i = 0; i < srclen; i++) {
-        c = *sp++;
-	c = FSW_SWAPVALUE_U32(c);
-        
-        if (c < 0x000080) {
-            *dp++ = (fsw_u8)c;
-        } else if (c < 0x000800) {
-            *dp++ = (fsw_u8)(0xc0 | ((c >> 6) & 0x1f));
-            *dp++ = (fsw_u8)(0x80 | (c & 0x3f));
-        } else if (c < 0x010000) {
-            *dp++ = (fsw_u8)(0xe0 | ((c >> 12) & 0x0f));
-            *dp++ = (fsw_u8)(0x80 | ((c >> 6) & 0x3f));
-            *dp++ = (fsw_u8)(0x80 | (c & 0x3f));
-        } else {
-            *dp++ = (fsw_u8)(0xf0 | ((c >> 18) & 0x07));
-            *dp++ = (fsw_u8)(0x80 | ((c >> 12) & 0x3f));
-            *dp++ = (fsw_u8)(0x80 | ((c >> 6) & 0x3f));
-            *dp++ = (fsw_u8)(0x80 | (c & 0x3f));
-        }
-    }
-    return FSW_SUCCESS;
+	fsw_status_t    status;
+	int             i, destsize;
+	fsw_u16       *sp;
+	fsw_u8       *dp;
+	fsw_u32         c;
+
+	sp = (fsw_u16 *)srcdata;
+	destsize = 0;
+	for (i = 0; i < srclen; i++) {
+		c = *sp++;
+		c = FSW_SWAPVALUE_U16(c);
+
+		if (c < 0x000080)
+			destsize++;
+		else if (c < 0x000800)
+			destsize += 2;
+		else if (c < 0x010000)
+			destsize += 3;
+		else
+			destsize += 4;
+	}
+
+	fsw_string_setter(dest, FSW_STRING_KIND_UTF8, srclen, destsize, NULL);
+	if (destsize < 1)
+		return FSW_SUCCESS;
+	status = fsw_alloc(dest->size, &dest->data);
+	if (status != FSW_SUCCESS)
+		return status;
+
+	sp = (fsw_u16 *)srcdata;
+	dp = (fsw_u8 *)dest->data;
+	for (i = 0; i < srclen; i++) {
+		c = *sp++;
+		c = FSW_SWAPVALUE_U16(c);
+
+		if (c < 0x000080) {
+			*dp++ = (fsw_u8)c;
+		} else if (c < 0x000800) {
+			*dp++ = (fsw_u8)(0xc0 | ((c >> 6) & 0x1f));
+			*dp++ = (fsw_u8)(0x80 | (c & 0x3f));
+		} else if (c < 0x010000) {
+			*dp++ = (fsw_u8)(0xe0 | ((c >> 12) & 0x0f));
+			*dp++ = (fsw_u8)(0x80 | ((c >> 6) & 0x3f));
+			*dp++ = (fsw_u8)(0x80 | (c & 0x3f));
+		} else {
+			*dp++ = (fsw_u8)(0xf0 | ((c >> 18) & 0x07));
+			*dp++ = (fsw_u8)(0x80 | ((c >> 12) & 0x3f));
+			*dp++ = (fsw_u8)(0x80 | ((c >> 6) & 0x3f));
+			*dp++ = (fsw_u8)(0x80 | (c & 0x3f));
+		}
+	}
+	return FSW_SUCCESS;
 }
