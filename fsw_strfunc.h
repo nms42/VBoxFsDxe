@@ -417,7 +417,7 @@ static fsw_status_t fsw_strcoerce_UTF16_SWAPPED_UTF8(void *srcdata, int srclen, 
 	destsize = 0;
 	for (i = 0; i < srclen; i++) {
 		c = *sp++;
-		c = FSW_SWAPVALUE_U16(c);
+		c = FSW_SWAPVALUE_U16((fsw_u16) c);
 
 		if (c < 0x000080)
 			destsize++;
@@ -440,7 +440,7 @@ static fsw_status_t fsw_strcoerce_UTF16_SWAPPED_UTF8(void *srcdata, int srclen, 
 	dp = (fsw_u8 *)dest->data;
 	for (i = 0; i < srclen; i++) {
 		c = *sp++;
-		c = FSW_SWAPVALUE_U16(c);
+		c = FSW_SWAPVALUE_U16((fsw_u16) c);
 
 		if (c < 0x000080) {
 			*dp++ = (fsw_u8)c;
