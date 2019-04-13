@@ -659,12 +659,22 @@ fsw_efi_FileHandle_Open (
   Status = EFI_UNSUPPORTED;
   File = FSW_FILE_FROM_FILE_HANDLE (This);
 
-  if (File->Type == FSW_EFI_FILE_KIND_DIR)
-    Status = fsw_efi_dir_open (File, NewHandle, FileName, OpenMode, Attributes);
+  switch (File->Type) {
+    case FSW_EFI_FILE_KIND_FILE:
+      /* Already opened */
 
-  // not supported for regular files
+      Status = EFI_SUCCESS;
+      break;
 
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with (%r) for {%s} kind %d, handle %p\n"), __FUNCTION__, Status, FileName, (int) File->Type, This));
+    case FSW_EFI_FILE_KIND_DIR:
+      Status = fsw_efi_dir_open (File, NewHandle, FileName, OpenMode, Attributes);
+      break;
+
+    default:
+      // Not supported for irregular files.
+      break;
+  }
+
   return Status;
 }
 
@@ -684,7 +694,6 @@ fsw_efi_FileHandle_Close (
   fsw_shandle_close (&File->shand);
   FreePool (File);
 
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: handle %p\n"), __FUNCTION__, This));
   return EFI_SUCCESS;
 }
 
@@ -883,23 +892,25 @@ fsw_efi_dnode_to_FileHandle (
     goto Done;
   }
 
-  // check type
-
-  if (dno->dkind != FSW_DNODE_KIND_FILE && dno->dkind != FSW_DNODE_KIND_DIR) {
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: unknown kind %d\n"), __FUNCTION__, (int) dno->dkind));
-    Status = EFI_UNSUPPORTED;
-    goto Done;
-  }
-
   // allocate file structure
 
   File = AllocateZeroPool (sizeof (FSW_FILE_DATA));
   File->Signature = FSW_FILE_DATA_SIGNATURE;
 
-  if (dno->dkind == FSW_DNODE_KIND_FILE)
-    File->Type = FSW_EFI_FILE_KIND_FILE;
-  else if (dno->dkind == FSW_DNODE_KIND_DIR)
-    File->Type = FSW_EFI_FILE_KIND_DIR;
+  // check type
+
+  switch (dno->dkind) {
+    case FSW_DNODE_KIND_FILE:
+      File->Type = FSW_EFI_FILE_KIND_FILE;
+      break;
+    case FSW_DNODE_KIND_DIR:
+      File->Type = FSW_EFI_FILE_KIND_DIR;
+      break;
+    default:
+      FreePool(File);
+      Status = EFI_UNSUPPORTED;
+      goto Done;
+  }
 
   // open shandle
 
@@ -1180,6 +1191,11 @@ fsw_efi_bless_info (
   } else {
     CopyMem (Buffer, dpp, RequiredSize);
     Status = EFI_SUCCESS;
+    {
+      tmpStr = ConvertDevicePathToText(dpp, TRUE, TRUE);
+      FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: handle %p, {devpath %s}\n"), __FUNCTION__, Volume, tmpStr));
+      FreePool(tmpStr);
+    }
   }
 
   *BufferSize = RequiredSize;
@@ -1207,8 +1223,6 @@ fsw_efi_dnode_getinfo (
   EFI_FILE_SYSTEM_INFO *FSInfo;
   UINTN RequiredSize;
   struct fsw_volume_stat vsb;
-
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: Incoming request (guid %g)\n"), __FUNCTION__, InformationType));
 
   Volume = (FSW_VOLUME_DATA *) File->shand.dnode->vol->host_data;
 
@@ -1250,9 +1264,6 @@ fsw_efi_dnode_getinfo (
 
     *BufferSize = RequiredSize;
     Status = EFI_SUCCESS;
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: volume label [%s] for (guid %g)\n"), __FUNCTION__,
-			    FSInfo->VolumeLabel,
-			    InformationType));
   } else if (CompareGuid (InformationType, &GUID_NAME (FileSystemVolumeLabelInfoId))) {	// ------
 
     // check buffer size
@@ -1273,9 +1284,6 @@ fsw_efi_dnode_getinfo (
 
     *BufferSize = RequiredSize;
     Status = EFI_SUCCESS;
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: volume label [%s] for (guid %g)\n"), __FUNCTION__,
-			    (CHAR16 *) Buffer,
-			    InformationType));
   } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFileInfo))) {		// ------
     Status = fsw_efi_bless_info (Volume, HFS_BLESS_SYSFILE, Buffer, BufferSize);
   } else if (CompareGuid (InformationType, &APPLE_GUID_NAME (BlessedSystemFolderInfo))) {	// ------
@@ -1288,16 +1296,6 @@ fsw_efi_dnode_getinfo (
   }
 
 Done:
-
-  FSW_MSG_DEBUGV ((FSW_MSGSTR ("%a: leaving with (%r), buffer size %d\n"), __FUNCTION__, Status, *BufferSize));
-  if (!EFI_ERROR (Status)) {
-    for (int i = 0; i < *BufferSize; i++) {
-      if (i > 0 && (i % 32) == 0)
-        FSW_MSG_DEBUGV ((FSW_MSGSTR ("\n")));
-      FSW_MSG_DEBUGV ((FSW_MSGSTR (" %02X"), ((CHAR8 *) Buffer)[i]));
-    }
-    FSW_MSG_DEBUGV ((FSW_MSGSTR ("\n")));
-  }
 
   return Status;
 }
