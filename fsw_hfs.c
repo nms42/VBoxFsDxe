@@ -1162,6 +1162,7 @@ fsw_hfs_get_extent (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struc
 static void
 hfs_dnode_stuff_info (struct fsw_hfs_dnode *dno, file_info_t *file_info)
 {
+	dno->g.dkind = file_info->kind;
 	dno->g.size = file_info->size;
 	dno->used_bytes = file_info->used;
 	dno->ctime = file_info->ctime;
