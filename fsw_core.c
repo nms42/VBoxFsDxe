@@ -903,8 +903,6 @@ fsw_status_t fsw_dnode_readlink_data(struct fsw_dnode *dno, struct fsw_string *l
     fsw_u32         buffer_size;
     char            buffer[FSW_PATH_MAX];
 
-    struct fsw_string s;
-
     if (dno == NULL || dno->vol == NULL || dno->size > FSW_PATH_MAX)
         return FSW_VOLUME_CORRUPTED;
 
@@ -919,6 +917,10 @@ fsw_status_t fsw_dnode_readlink_data(struct fsw_dnode *dno, struct fsw_string *l
 	    fsw_shandle_close(&shand);
 
 	    if (status == FSW_SUCCESS) {
+			struct fsw_string s;
+
+			fsw_memzero(&s, sizeof (s));
+			
 		    // TODO: link datum type?
 
 		    fsw_string_setter(&s, FSW_STRING_KIND_ISO88591, buffer_size, buffer_size, buffer);
@@ -972,6 +974,7 @@ fsw_status_t fsw_dnode_resolve(struct fsw_dnode *dno, struct fsw_dnode **target_
 
         // read the link's target
 
+		fsw_memzero(&target_name, sizeof (target_name));
         status = fsw_dnode_readlink(dno, &target_name);
 
         if (status != FSW_SUCCESS)
