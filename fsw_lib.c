@@ -534,18 +534,18 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
 {
     int i, maxlen;
 
-    if (buffer->skind == FSW_STRING_KIND_EMPTY || buffer->len == 0) {
+    if (fsw_strkind(buffer) == FSW_STRING_KIND_EMPTY || fsw_strlen(buffer) == 0) {
         element->skind = FSW_STRING_KIND_EMPTY;
         return;
     }
 
-    maxlen = buffer->len;
+    maxlen = fsw_strlen(buffer);
     *element = *buffer;
 
-    if (buffer->skind == FSW_STRING_KIND_ISO88591) {
+    if (fsw_strkind(buffer) == FSW_STRING_KIND_ISO88591 || fsw_strkind(buffer) == FSW_STRING_KIND_UTF8) {
         fsw_u8 *p;
 
-        p = (fsw_u8 *)element->data;
+        p = (fsw_u8 *) fsw_strchars(element);
 
         for (i = 0; i < maxlen; i++, p++) {
 
@@ -563,13 +563,13 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
             buffer->len -= i;
         }
 
-        element->size = element->len;
-        buffer->size  = buffer->len;
+        element->size = fsw_strlen(element);
+        buffer->size  = fsw_strlen(buffer);
 
     } else if (buffer->skind == FSW_STRING_KIND_UTF16) {
         fsw_u16 *p;
 
-        p = (fsw_u16 *)element->data;
+        p = (fsw_u16 *) fsw_strchars(element);
 
         for (i = 0; i < maxlen; i++, p++) {
 
@@ -586,15 +586,15 @@ void fsw_strsplit(struct fsw_string *element, struct fsw_string *buffer, char se
             buffer->len -= i;
         }
 
-        element->size = element->len * sizeof(fsw_u16);
-        buffer->size  = buffer->len  * sizeof(fsw_u16);
+        element->size = fsw_strlen(element) * sizeof(fsw_u16);
+        buffer->size  = fsw_strlen(buffer) * sizeof(fsw_u16);
 
     } else {
         // fallback
         buffer->skind = FSW_STRING_KIND_EMPTY;
     }
 
-    // TODO: support UTF8 and UTF16_SWAPPED
+    // TODO: support UTF16_SWAPPED
 }
 
 /**
