@@ -308,28 +308,36 @@ fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path,
     fsw_string_setter(&lookup_path, FSW_STRING_KIND_ISO88591, lplen, lplen, (void *)path);
 
     // resolve the path (symlinks along the way are automatically resolved)
+
     status = fsw_dnode_lookup_path(pvol->vol->root, &lookup_path, '/', &dno);
+
     if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_open_dno: fsw_dnode_lookup_path returned %d\n", status);
         return status;
     }
 
     // if the final node is a symlink, also resolve it
+
     status = fsw_dnode_resolve(dno, &target_dno);
     fsw_dnode_release(dno);
+
     if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_open_dno: fsw_dnode_resolve returned %d\n", status);
         return status;
     }
+
     dno = target_dno;
 
     // check that it is a regular file
+
     status = fsw_dnode_fill(dno);
+
     if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_open_dno: fsw_dnode_fill returned %d\n", status);
         fsw_dnode_release(dno);
         return status;
     }
+
     if (dno->dkind != required_kind) {
         fprintf(stderr, "fsw_posix_open_dno: dnode is not of the requested type\n");
         fsw_dnode_release(dno);
@@ -337,10 +345,13 @@ fsw_status_t fsw_posix_open_dno(struct fsw_posix_volume *pvol, const char *path,
     }
 
     // open shandle
+
     status = fsw_shandle_open(dno, shand);
+
     if (status != FSW_SUCCESS) {
         fprintf(stderr, "fsw_posix_open_dno: fsw_shandle_open returned %d\n", status);
     }
+
     fsw_dnode_release(dno);
     return status;
 }
