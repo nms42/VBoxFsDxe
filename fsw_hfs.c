@@ -288,10 +288,10 @@ fsw_hfs_read_file (struct fsw_hfs_dnode *dno, fsw_u64 pos, fsw_s32 len, fsw_u8 *
 {
 	fsw_status_t status;
 	fsw_u32 log_bno;
+	fsw_s32 read = 0;
 	fsw_u32 block_size_bits = dno->g.vol->block_size_shift;
 	fsw_u32 block_size = (1 << block_size_bits);
 	fsw_u32 block_size_mask = block_size - 1;
-	fsw_s32 read = 0;
 	
 	while (len > 0) {
 		fsw_u32 off = (fsw_u32) (pos & block_size_mask);
@@ -701,18 +701,23 @@ fsw_hfs_btree_read_node (struct fsw_hfs_btree *btree, fsw_u32 nodenum, btnode_da
 {
 	fsw_status_t status;
 	btnode_datum_t* buffer;
-	fsw_u32 offset;
+	fsw_u32 roffset;
 
 	status = fsw_alloc (btree->btnode_size, &buffer);
 
 	if (status == FSW_SUCCESS) {
+		fsw_u64 bstart;
+		fsw_s32 rv;
+
 		status = FSW_VOLUME_CORRUPTED;
+		bstart = nodenum * btree->btnode_size;
 
-		if ((fsw_u32) fsw_hfs_read_file(btree->btfile, (fsw_u64) nodenum * btree->btnode_size, btree->btnode_size,
-										(fsw_u8 *) buffer) == btree->btnode_size) {
-			offset = fsw_hfs_btnode_keyoffset(btree, buffer, 0);
+		rv = fsw_hfs_read_file(btree->btfile, bstart, btree->btnode_size, (fsw_u8 *) buffer);
 
-			if (offset == sizeof (BTNodeDescriptor)) {
+		if ((fsw_u32) rv == btree->btnode_size) {
+			roffset = fsw_hfs_btnode_keyoffset(btree, buffer, 0);
+
+			if (roffset == sizeof (BTNodeDescriptor)) {
 				*outbuf = buffer;
 				status = FSW_SUCCESS;
 			}
