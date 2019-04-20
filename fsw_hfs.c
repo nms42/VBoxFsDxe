@@ -46,7 +46,10 @@
  * Handy type to deal with memory holding btnode datum
  */
 
-typedef fsw_u16 btnode_datum_t;
+typedef struct {
+	BTNodeDescriptor ndesc;
+	fsw_u16 shorts[1];
+} btnode_datum_t;
 
 typedef struct {
   fsw_u32 id;
@@ -383,8 +386,9 @@ fsw_hfs_cnid2threadrecord (struct fsw_hfs_volume *vol, fsw_u32 cnid, btnode_datu
 	if (catkey != NULL) {
 		status = fsw_hfs_btree_search (&vol->catalog_tree, (BTreeKey *) catkey, fsw_hfs_cmpt_catkey, btnode, &tuplenum);
 
-		if (status == FSW_SUCCESS)
+		if (status == FSW_SUCCESS) {
 			trp = (HFSPlusCatalogThread *) fsw_hfs_btnode_record_ptr (fsw_hfs_btnode_key (&vol->catalog_tree, *btnode, tuplenum));
+		}
 	}
 
 	fsw_free(catkey);
@@ -658,13 +662,14 @@ fsw_hfs_find_block (HFSPlusExtentRecord *exts, fsw_u32 *lbno, fsw_u32 *pbno)
 /* Find in btnode key offset for given tuple (key, record) number */
 
 static fsw_u32
-fsw_hfs_btnode_keyoffset (struct fsw_hfs_btree *btree, btnode_datum_t *node, fsw_u32 tuplenum)
+fsw_hfs_btnode_keyoffset (struct fsw_hfs_btree *btree, btnode_datum_t *btnode, fsw_u32 tuplenum)
 {
 	fsw_u16 u16raw;
 	fsw_u32 ix;
 
-	ix = (btree->btnode_size / sizeof (btnode_datum_t) - 1) - tuplenum;
-	u16raw = node[ix];
+	ix = ((btree->btnode_size - sizeof (BTNodeDescriptor)) / sizeof (fsw_u16)) - 1 - tuplenum;
+
+	u16raw = btnode->shorts[ix];
 
 	return be16_to_cpu (u16raw);
 }
@@ -717,7 +722,7 @@ fsw_hfs_btree_read_node (struct fsw_hfs_btree *btree, fsw_u32 nodenum, btnode_da
 		if ((fsw_u32) rv == btree->btnode_size) {
 			roffset = fsw_hfs_btnode_keyoffset(btree, buffer, 0);
 
-			if (roffset == sizeof (BTNodeDescriptor)) {
+			if (roffset >= sizeof (BTNodeDescriptor)) {
 				*outbuf = buffer;
 				status = FSW_SUCCESS;
 			}
@@ -744,25 +749,23 @@ static fsw_status_t
 fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_keys) (BTreeKey *key1, BTreeKey *key2), btnode_datum_t **btnode_out, fsw_u32 *tuplenum_out)
 {
 	fsw_status_t status;
-	btnode_datum_t *rawbtnode = NULL;
-	BTNodeDescriptor *node;
-	fsw_u32 currnode;
+	btnode_datum_t *btnode = NULL;
+	fsw_u32 btnodenum;
 	fsw_u32 tuplenum;
 
-	currnode = btree->btroot_node;
+	btnodenum = btree->btroot_node;
 
 	for (;;) {
 		fsw_s32 cmp = 0;
 		fsw_u32 count;
 		BTreeKey *currkey;
 
-		status = fsw_hfs_btree_read_node (btree, currnode, &rawbtnode);
+		status = fsw_hfs_btree_read_node (btree, btnodenum, &btnode);
 
 		if (status != FSW_SUCCESS)
 			break;
 
-		node = (BTNodeDescriptor *) rawbtnode;
-		count = be16_to_cpu (node->numRecords);
+		count = be16_to_cpu (btnode->ndesc.numRecords);
 
 		if (count == 0) {
 			status = FSW_NOT_FOUND;
@@ -772,29 +775,29 @@ fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_
 #if 1
 		/* linear search */
 		for (tuplenum = 0; tuplenum < count; tuplenum++) {
-			currkey = fsw_hfs_btnode_key (btree, rawbtnode, tuplenum);
+			currkey = fsw_hfs_btnode_key (btree, btnode, tuplenum);
 			cmp = compare_keys (currkey, key);
 
-			if (node->kind == kBTLeafNode) {
+			if (btnode->ndesc.kind == kBTLeafNode) {
 				if (cmp == 0) {
-					*btnode_out = rawbtnode;
+					*btnode_out = btnode;
 					*tuplenum_out = tuplenum;
 					return FSW_SUCCESS;
 				}
-			} else if (node->kind == kBTIndexNode) {
+			} else if (btnode->ndesc.kind == kBTIndexNode) {
 				if (cmp > 0)
 					break;
-				currnode = fsw_hfs_btree_ix_next_btnodenum (currkey);
+				btnodenum = fsw_hfs_btree_ix_next_btnodenum (currkey);
 			}
 		}
 
-		if (node->kind == kBTLeafNode) {
+		if (btnode->ndesc.kind == kBTLeafNode) {
 			status = FSW_NOT_FOUND;
 			break;
 		}
 
-		if (cmp <= 0 && node->fLink != 0) {
-			currnode = be32_to_cpu (node->fLink);
+		if (cmp <= 0 && btnode->ndesc.fLink != 0) {
+			btnodenum = be32_to_cpu (btnode->ndesc.fLink);
 		}
 #else
 		/* binary search */
@@ -806,7 +809,7 @@ fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_
 			while (lower <= upper) {
 				tuplenum = (lower + upper) / 2;
 
-				currkey = fsw_hfs_btnode_key (btree, rawbtnode, tuplenum);
+				currkey = fsw_hfs_btnode_key (btree, btnode, tuplenum);
 				cmp = compare_keys (currkey, key);
 
 				if (cmp > 0) {
@@ -814,8 +817,8 @@ fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_
 				} else if (cmp < 0) {
 					lower = tuplenum + 1;
 				} else if (cmp == 0) {
-					if (node->kind == kBTLeafNode) { /* Found! */
-						*btnode_out = rawbtnode;
+					if (btnode->ndesc.kind == kBTLeafNode) {
+						*btnode_out = btnode;
 						*tuplenum_out = tuplenum;
 						return FSW_SUCCESS;
 					}
@@ -823,20 +826,22 @@ fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_
 			}
 
 			if (cmp < 0)
-				currkey = fsw_hfs_btnode_key (btree, rawbtnode, upper - 1);
+				currkey = fsw_hfs_btnode_key (btree, btnode, tuplenum);
 
-			if (node->kind == kBTIndexNode && currkey != NULL) {
-				currnode = fsw_hfs_btree_ix_next_btnodenum (currkey);
+			if (btnode->ndesc.kind == kBTIndexNode && currkey != NULL) {
+				btnodenum = fsw_hfs_btree_ix_next_btnodenum (currkey);
 			} else {
 				status = FSW_NOT_FOUND;
 				break;
 			}
 		}
 #endif
+		fsw_free(btnode);
+		btnode = NULL;
 	}
 
 	if (status != FSW_SUCCESS)
-		fsw_free (rawbtnode);
+		fsw_free (btnode);
 
 	return status;
 }
@@ -1337,7 +1342,7 @@ fsw_hfs_readlink (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 static fsw_status_t
 fsw_hfs_dnode_readinfo (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno)
 {
-	fsw_status_t status = FSW_VOLUME_CORRUPTED;
+	fsw_status_t status = FSW_NOT_FOUND;
 	btnode_datum_t *btnode = NULL;
 	HFSPlusCatalogThread *trp = NULL;
 
