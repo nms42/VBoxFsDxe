@@ -751,14 +751,14 @@ fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_
 	fsw_status_t status;
 	btnode_datum_t *btnode = NULL;
 	fsw_u32 btnodenum;
-	fsw_u32 tuplenum;
+	fsw_u32 tuplenum = 0;
 
 	btnodenum = btree->btroot_node;
 
 	for (;;) {
 		fsw_s32 cmp = 0;
 		fsw_u32 count;
-		BTreeKey *currkey;
+		BTreeKey *currkey = NULL;
 
 		status = fsw_hfs_btree_read_node (btree, btnodenum, &btnode);
 
@@ -772,70 +772,46 @@ fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_
 			break;
 		}
 
-#if 1
-		/* linear search */
 		for (tuplenum = 0; tuplenum < count; tuplenum++) {
 			currkey = fsw_hfs_btnode_key (btree, btnode, tuplenum);
 			cmp = compare_keys (currkey, key);
 
-			if (btnode->ndesc.kind == kBTLeafNode) {
-				if (cmp == 0) {
-					*btnode_out = btnode;
-					*tuplenum_out = tuplenum;
-					return FSW_SUCCESS;
-				}
-			} else if (btnode->ndesc.kind == kBTIndexNode) {
-				if (cmp > 0)
-					break;
-				btnodenum = fsw_hfs_btree_ix_next_btnodenum (currkey);
-			}
-		}
-
-		if (btnode->ndesc.kind == kBTLeafNode) {
-			status = FSW_NOT_FOUND;
-			break;
-		}
-
-		if (cmp <= 0 && btnode->ndesc.fLink != 0) {
-			btnodenum = be32_to_cpu (btnode->ndesc.fLink);
-		}
-#else
-		/* binary search */
-		{
-			fsw_u32 lower = 0;
-			fsw_u32 upper = count - 1;
-			currkey = NULL;
-
-			while (lower <= upper) {
-				tuplenum = (lower + upper) / 2;
-
-				currkey = fsw_hfs_btnode_key (btree, btnode, tuplenum);
-				cmp = compare_keys (currkey, key);
-
-				if (cmp > 0) {
-					upper = tuplenum - 1;
-				} else if (cmp < 0) {
-					lower = tuplenum + 1;
-				} else if (cmp == 0) {
-					if (btnode->ndesc.kind == kBTLeafNode) {
+			if (cmp == 0) {
+				if (btnode->ndesc.kind == kBTLeafNode) {
 						*btnode_out = btnode;
 						*tuplenum_out = tuplenum;
 						return FSW_SUCCESS;
-					}
 				}
-			}
 
-			if (cmp < 0)
-				currkey = fsw_hfs_btnode_key (btree, btnode, tuplenum);
-
-			if (btnode->ndesc.kind == kBTIndexNode && currkey != NULL) {
-				btnodenum = fsw_hfs_btree_ix_next_btnodenum (currkey);
-			} else {
-				status = FSW_NOT_FOUND;
 				break;
 			}
+
+			if (cmp > 0)
+				break;
+
+			if (cmp < 0) {
+				if (btnode->ndesc.kind == kBTIndexNode) {
+					btnodenum = fsw_hfs_btree_ix_next_btnodenum (currkey);
+				}
+			}
 		}
-#endif
+
+		if (cmp == 0) {	/* kBTIndexNode only here */
+			btnodenum = fsw_hfs_btree_ix_next_btnodenum (currkey);
+			continue;
+		}
+
+		if (cmp > 0) {
+			if (tuplenum > 0 && btnode->ndesc.kind == kBTIndexNode)
+				continue;
+
+			status = FSW_NOT_FOUND;	/* Very first record in btnode still above */
+			break;
+		}
+
+		status = FSW_NOT_FOUND;	/* Very last record in btnode still below */
+		break;
+
 		fsw_free(btnode);
 		btnode = NULL;
 	}
@@ -953,18 +929,17 @@ fsw_hfs_btnode_iterate_records (struct fsw_hfs_btree *btree, btnode_datum_t *fir
 
 	/* We modify node, so make a copy */
 
-	BTNodeDescriptor *btnode = (BTNodeDescriptor *) first_btnode;
-	btnode_datum_t *rawbtnode = NULL;
+	btnode_datum_t *btnode = first_btnode;
 
 	for (;;) {
 		fsw_u32 i;
-		fsw_u32 count = be16_to_cpu (btnode->numRecords);
+		fsw_u32 count = be16_to_cpu (btnode->ndesc.numRecords);
 		fsw_u32 next_btnode;
 
 		/* Iterate over all records in this node */
 
 		for (i = first_tuplenum; i < count; i++) {
-			int rv = callback (fsw_hfs_btnode_key (btree, (btnode_datum_t *) btnode, i), param);
+			int rv = callback (fsw_hfs_btnode_key (btree, btnode, i), param);
 
 			switch (rv) {
 				case 1:
@@ -978,20 +953,20 @@ fsw_hfs_btnode_iterate_records (struct fsw_hfs_btree *btree, btnode_datum_t *fir
 			/* if callback returned 0 - continue */
 		}
 
-		next_btnode = be32_to_cpu (btnode->fLink);
+		next_btnode = be32_to_cpu (btnode->ndesc.fLink);
 
 		if (next_btnode == 0) {
 			status = FSW_NOT_FOUND;
 			break;
 		}
 
-		status = fsw_hfs_btree_read_node (btree, next_btnode, &rawbtnode);
+		fsw_free(btnode);
+		btnode = NULL;
+		status = fsw_hfs_btree_read_node (btree, next_btnode, &btnode);
 
 		if (status != FSW_SUCCESS)
 			break;
 
-		fsw_free(btnode);
-		btnode = (BTNodeDescriptor *) rawbtnode;
 		first_tuplenum = 0;
 	}
 
@@ -1311,8 +1286,6 @@ fsw_hfs_readlink (struct fsw_hfs_volume *vol, struct fsw_hfs_dnode *dno, struct 
 {
   /*
    * XXX: Hardlinks for directories -- not yet.
-   * Hex dump visual inspection of Apple hfsplus{32,64}.efi
-   * revealed no signs of directory hardlinks support. Manana ;-)
    */
 
   if(dno->creator == kHFSPlusCreator && dno->crtype == kHardLinkFileType) {
