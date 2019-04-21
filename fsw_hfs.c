@@ -153,7 +153,7 @@ static int fsw_hfs_cmpb_catkey (
 	BTreeKey *key2
 );
 
-static int fsw_hfs_cmpi_catkey (
+static int fsw_hfs_cmpf_catkey (
 	BTreeKey *key1,
 	BTreeKey *key2
 );
@@ -407,7 +407,7 @@ fsw_hfs_volume_catalog_setup (struct fsw_hfs_volume *vol)
 	hr = fsw_hfs_btree_read_hdrec(&vol->catalog_tree);
 
 	if (hr != NULL) {
-		vol->btkey_compare = hr->keyCompareType == kHFSBinaryCompare ? fsw_hfs_cmpb_catkey : fsw_hfs_cmpi_catkey;
+		vol->btkey_compare = hr->keyCompareType == kHFSBinaryCompare ? fsw_hfs_cmpb_catkey : fsw_hfs_cmpf_catkey;
 		fsw_free(hr);
 	} else {
 		return FSW_VOLUME_CORRUPTED;
@@ -776,41 +776,30 @@ fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_
 			currkey = fsw_hfs_btnode_key (btree, btnode, tuplenum);
 			cmp = compare_keys (currkey, key);
 
+			if (cmp <= 0 && btnode->ndesc.kind == kBTIndexNode) {
+				btnodenum = fsw_hfs_btree_ix_next_btnodenum (currkey);
+			}
+
+			if (cmp >= 0)
+				break;
+		}
+
+		if (btnode->ndesc.kind == kBTLeafNode) {
+			status = FSW_NOT_FOUND;
+
 			if (cmp == 0) {
-				if (btnode->ndesc.kind == kBTLeafNode) {
-						*btnode_out = btnode;
-						*tuplenum_out = tuplenum;
-						return FSW_SUCCESS;
-				}
-
-				break;
+				*btnode_out = btnode;
+				*tuplenum_out = tuplenum;
+				status = FSW_SUCCESS;
 			}
 
-			if (cmp > 0)
-				break;
-
-			if (cmp < 0) {
-				if (btnode->ndesc.kind == kBTIndexNode) {
-					btnodenum = fsw_hfs_btree_ix_next_btnodenum (currkey);
-				}
-			}
-		}
-
-		if (cmp == 0) {	/* kBTIndexNode only here */
-			btnodenum = fsw_hfs_btree_ix_next_btnodenum (currkey);
-			continue;
-		}
-
-		if (cmp > 0) {
-			if (tuplenum > 0 && btnode->ndesc.kind == kBTIndexNode)
-				continue;
-
-			status = FSW_NOT_FOUND;	/* Very first record in btnode still above */
 			break;
 		}
 
-		status = FSW_NOT_FOUND;	/* Very last record in btnode still below */
-		break;
+		if (tuplenum == 0 && cmp > 0) {
+			status = FSW_NOT_FOUND;
+			break;
+		}
 
 		fsw_free(btnode);
 		btnode = NULL;
@@ -915,7 +904,7 @@ fsw_hfs_btnode_visit_record (BTreeKey *btkey, void *param)
 			break;
 	}
 
-	fill_fileinfo (vp->vol, (BTreeKey *) cat_key, &vp->file_info);
+	fill_fileinfo (vp->vol, btkey, &vp->file_info);
 	(void) fsw_hfs_unistr_be2string(&vp->file_info.name, FSW_STRING_KIND_UTF16, &cat_key->nodeName);	/* XXX: (void)? */
 	vp->shandle->pos++;
 
@@ -1018,7 +1007,7 @@ fsw_hfs_cmpt_catkey (BTreeKey *btkey1, BTreeKey *btkey2)
 }
 
 static int
-fsw_hfs_cmp2_catkey (HFSPlusCatalogKey *ckey1, HFSPlusCatalogKey *ckey2, int fold)
+fsw_hfs_cmpf_catkey (BTreeKey *btkey1, BTreeKey *btkey2)
 {
 	int rv;
 	int apos;
@@ -1029,6 +1018,8 @@ fsw_hfs_cmp2_catkey (HFSPlusCatalogKey *ckey1, HFSPlusCatalogKey *ckey2, int fol
 	fsw_u16 bc;
 	fsw_u16 *p1;
 	fsw_u16 *p2;
+	HFSPlusCatalogKey *ckey1 = (HFSPlusCatalogKey *) btkey1;
+	HFSPlusCatalogKey *ckey2 = (HFSPlusCatalogKey *) btkey2;
 
 	rv = be32_to_cpu(ckey1->parentID) - ckey2->parentID;
 
@@ -1051,16 +1042,14 @@ fsw_hfs_cmp2_catkey (HFSPlusCatalogKey *ckey1, HFSPlusCatalogKey *ckey2, int fol
 
 		for (ac = 0; ac == 0 && apos < ckey1nlen; apos++) {
 			ac = be16_to_cpu (p1[apos]);
-			if (fold)
-				ac = ac ? fsw_to_lower (ac) : 0xFFFF;
+			ac = ac ? fsw_to_lower (ac) : 0xFFFF;
 		}
 
 		/* get next valid character from ckey2 */
 
 		for (bc = 0; bc == 0 && bpos < ckey2nlen; bpos++) {
 			bc = p2[bpos];
-			if (fold)
-				bc = bc ? fsw_to_lower (bc) : 0xFFFF;
+			bc = bc ? fsw_to_lower (bc) : 0xFFFF;
 		}
 
 		if (ac != bc)
@@ -1074,15 +1063,37 @@ fsw_hfs_cmp2_catkey (HFSPlusCatalogKey *ckey1, HFSPlusCatalogKey *ckey2, int fol
 }
 
 static int
-fsw_hfs_cmpb_catkey (BTreeKey *key1, BTreeKey *key2)
+fsw_hfs_cmpb_catkey (BTreeKey *btkey1, BTreeKey *btkey2)
 {
-	return fsw_hfs_cmp2_catkey((HFSPlusCatalogKey *) key1, (HFSPlusCatalogKey *) key2, 0);
-}
+	HFSPlusCatalogKey *ckey1 = (HFSPlusCatalogKey *) btkey1;
+	HFSPlusCatalogKey *ckey2 = (HFSPlusCatalogKey *) btkey2;
+	int rv;
+	int ckey1nlen;
+	int ckey2nlen;
+	int commlen;
+	fsw_u16 *p1;
+	fsw_u16 *p2;
+	int i;
 
-static int
-fsw_hfs_cmpi_catkey (BTreeKey *key1, BTreeKey *key2)
-{
-	return fsw_hfs_cmp2_catkey((HFSPlusCatalogKey *) key1, (HFSPlusCatalogKey *) key2, 1);
+	rv = be32_to_cpu(ckey1->parentID) - ckey2->parentID;
+
+	if (rv != 0)
+		return rv;
+
+	ckey1nlen = be16_to_cpu (ckey1->nodeName.length);
+	ckey2nlen = ckey2->nodeName.length;
+	commlen = ckey1nlen > ckey2nlen ? ckey2nlen : ckey1nlen;
+
+	p1 = &ckey1->nodeName.unicode[0];
+	p2 = &ckey2->nodeName.unicode[0];
+
+	for (i = 0; i < commlen; i++) {
+		rv = be16_to_cpu(p1[i]) - p2[i];
+		if (rv != 0)
+			return rv;
+	}
+
+	return ckey1nlen - ckey2nlen;
 }
 
 /**
