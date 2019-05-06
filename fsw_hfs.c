@@ -708,12 +708,12 @@ fsw_hfs_btnode_record_ptr (BTreeKey *currkey)
 }
 
 static fsw_status_t
-fsw_hfs_btree_read_node (struct fsw_hfs_btree *btree, fsw_u32 nodenum, btnode_datum_t** outbuf)
+fsw_hfs_btree_read_node (struct fsw_hfs_btree *btree, fsw_u32 nodenum, btnode_datum_t** outnode)
 {
 	fsw_status_t status;
-	btnode_datum_t* buffer;
+	btnode_datum_t* btnode;
 
-	status = fsw_alloc (btree->btnode_size, &buffer);
+	status = fsw_alloc (btree->btnode_size, &btnode);
 
 	if (status == FSW_SUCCESS) {
 		fsw_u64 bstart;
@@ -721,21 +721,20 @@ fsw_hfs_btree_read_node (struct fsw_hfs_btree *btree, fsw_u32 nodenum, btnode_da
 
 		status = FSW_VOLUME_CORRUPTED;
 		bstart = (fsw_u64) nodenum * btree->btnode_size;
-
-		rv = fsw_hfs_read_file(btree->btfile, bstart, btree->btnode_size, (fsw_u8 *) buffer);
+		rv = fsw_hfs_read_file(btree->btfile, bstart, btree->btnode_size, (fsw_u8 *) btnode);
 
 		if ((fsw_u32) rv == btree->btnode_size) {
-			fsw_u32 roffset = fsw_hfs_btnode_keyoffset(btree, buffer, 0);
+			fsw_u32 roffset = fsw_hfs_btnode_keyoffset(btree, btnode, 0);
 
 			if (roffset == sizeof (BTNodeDescriptor)) {
-				*outbuf = buffer;
+				*outnode = btnode;
 				status = FSW_SUCCESS;
 			}
 		}
 	}
 
 	if (status != FSW_SUCCESS)
-		fsw_free(buffer);
+		fsw_free(btnode);
 
 	return status;
 }
