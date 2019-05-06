@@ -722,7 +722,7 @@ fsw_hfs_btree_read_node (struct fsw_hfs_btree *btree, fsw_u32 nodenum, btnode_da
 		if ((fsw_u32) rv == btree->btnode_size) {
 			roffset = fsw_hfs_btnode_keyoffset(btree, buffer, 0);
 
-			if (roffset >= sizeof (BTNodeDescriptor)) {
+			if (roffset == sizeof (BTNodeDescriptor)) {
 				*outbuf = buffer;
 				status = FSW_SUCCESS;
 			}
