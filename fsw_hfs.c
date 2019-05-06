@@ -721,6 +721,7 @@ fsw_hfs_btree_read_node (struct fsw_hfs_btree *btree, fsw_u32 nodenum, btnode_da
 
 		status = FSW_VOLUME_CORRUPTED;
 		bstart = (fsw_u64) nodenum * btree->btnode_size;
+		fsw_memzero (btnode, btree->btnode_size);
 		rv = fsw_hfs_read_file(btree->btfile, bstart, btree->btnode_size, (fsw_u8 *) btnode);
 
 		if ((fsw_u32) rv == btree->btnode_size) {
