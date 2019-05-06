@@ -264,7 +264,6 @@ fsw_hfs_read_block (struct fsw_hfs_dnode *dno, fsw_u32 log_bno, fsw_u32 off, fsw
 {
 	fsw_status_t status;
 	struct fsw_extent extent;
-	fsw_u32 phys_bno;
 	fsw_u8 *buffer;
 
 	fsw_memzero(&extent, sizeof(extent));
@@ -272,6 +271,8 @@ fsw_hfs_read_block (struct fsw_hfs_dnode *dno, fsw_u32 log_bno, fsw_u32 off, fsw
 	status = fsw_hfs_get_extent (dno->g.vol, dno, &extent);
 
 	if (status == FSW_SUCCESS) {
+		fsw_u32 phys_bno;
+
 		phys_bno = extent.phys_start;
 		status = fsw_block_get (dno->g.vol, phys_bno, 0, (void **) &buffer);
 
@@ -290,13 +291,13 @@ static fsw_s32
 fsw_hfs_read_file (struct fsw_hfs_dnode *dno, fsw_u64 pos, fsw_s32 len, fsw_u8 *buf)
 {
 	fsw_status_t status;
-	fsw_u32 log_bno;
 	fsw_s32 read = 0;
 	fsw_u32 block_size_bits = dno->g.vol->block_size_shift;
 	fsw_u32 block_size = (1 << block_size_bits);
 	fsw_u32 block_size_mask = block_size - 1;
 	
 	while (len > 0) {
+		fsw_u32 log_bno;
 		fsw_u32 off = (fsw_u32) (pos & block_size_mask);
 		fsw_s32 next_len = len;
 		
@@ -442,7 +443,6 @@ fsw_hfs_volume_mount (struct fsw_hfs_volume *vol)
 {
 	fsw_status_t status, rv;
 	void *buffer = NULL;
-	HFSPlusVolumeHeader *voldesc;
 	fsw_u32 blockno;
 
 	vol->primary_voldesc = NULL;
@@ -452,8 +452,9 @@ fsw_hfs_volume_mount (struct fsw_hfs_volume *vol)
 #define CHECK(sx) if (sx != FSW_SUCCESS) { rv = sx; break; }
 
 	do {
-		fsw_u16 signature;
+		HFSPlusVolumeHeader *voldesc;
 		fsw_u32 block_size;
+		fsw_u16 signature;
 
 		status = fsw_block_get (vol, blockno, 0, &buffer);
 		CHECK (status);
