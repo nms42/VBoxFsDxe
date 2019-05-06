@@ -756,7 +756,7 @@ fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_
 	fsw_status_t status;
 	btnode_datum_t *btnode = NULL;
 	fsw_u32 btnodenum;
-	fsw_u32 tuplenum = 0;
+	fsw_u32 tuplenum;
 
 	btnodenum = btree->btroot_node;
 
