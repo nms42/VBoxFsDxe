@@ -725,7 +725,7 @@ fsw_hfs_btree_read_node (struct fsw_hfs_btree *btree, fsw_u32 nodenum, btnode_da
 			if (roffset == sizeof (BTNodeDescriptor)) {
 				fsw_u16 count;
 
-				count = be16_to_cpu (btnode->ndesc.numRecords);
+				count = be16_to_cpu (buffer->ndesc.numRecords);
 
 				if (count > 0) {
 					*outbuf = buffer;
