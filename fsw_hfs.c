@@ -665,25 +665,30 @@ fsw_hfs_find_block (HFSPlusExtentRecord *exts, fsw_u32 *lbno, fsw_u32 *pbno)
 static fsw_u32
 fsw_hfs_btnode_keyoffset (struct fsw_hfs_btree *btree, btnode_datum_t *btnode, fsw_u32 tuplenum)
 {
-	fsw_u16 u16raw;
-	fsw_u32 ix;
+	fsw_u16 koff = 0;
+	fsw_u16 count;
 
-	ix = ((btree->btnode_size - sizeof (BTNodeDescriptor)) / sizeof (fsw_u16)) - 1 - tuplenum;
+	count = be16_to_cpu (btnode->ndesc.numRecords);
 
-	u16raw = btnode->shorts[ix];
+	if (count > 0 && tuplenum < count) {
+		fsw_u32 ix;
 
-	return be16_to_cpu (u16raw);
+		ix = ((btree->btnode_size - sizeof (BTNodeDescriptor)) / sizeof (fsw_u16)) - 1 - tuplenum;
+		koff = be16_to_cpu(btnode->shorts[ix]);
+	}
+
+	return koff;
 }
 
 /* Pointer to the key inside btnode for given tuple (key, record) number */
 
 static BTreeKey *
-fsw_hfs_btnode_key (struct fsw_hfs_btree *btree, btnode_datum_t* node, fsw_u32 tuplenum)
+fsw_hfs_btnode_key (struct fsw_hfs_btree *btree, btnode_datum_t* btnode, fsw_u32 tuplenum)
 {
-	fsw_u8 *cnode = (fsw_u8 *) node;
+	fsw_u8 *cnode = (fsw_u8 *) btnode;
 	fsw_u32 offset;
 
-	offset = fsw_hfs_btnode_keyoffset (btree, node, tuplenum);
+	offset = fsw_hfs_btnode_keyoffset (btree, btnode, tuplenum);
 
 	if (offset < sizeof(BTNodeDescriptor) || offset > btree->btnode_size - sizeof (fsw_u16)) {
 		return NULL;
@@ -723,14 +728,8 @@ fsw_hfs_btree_read_node (struct fsw_hfs_btree *btree, fsw_u32 nodenum, btnode_da
 			fsw_u32 roffset = fsw_hfs_btnode_keyoffset(btree, buffer, 0);
 
 			if (roffset == sizeof (BTNodeDescriptor)) {
-				fsw_u16 count;
-
-				count = be16_to_cpu (buffer->ndesc.numRecords);
-
-				if (count > 0) {
-					*outbuf = buffer;
-					status = FSW_SUCCESS;
-				}
+				*outbuf = buffer;
+				status = FSW_SUCCESS;
 			}
 		}
 	}
