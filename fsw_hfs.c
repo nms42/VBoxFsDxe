@@ -706,7 +706,6 @@ fsw_hfs_btree_read_node (struct fsw_hfs_btree *btree, fsw_u32 nodenum, btnode_da
 {
 	fsw_status_t status;
 	btnode_datum_t* buffer;
-	fsw_u32 roffset;
 
 	status = fsw_alloc (btree->btnode_size, &buffer);
 
@@ -720,11 +719,17 @@ fsw_hfs_btree_read_node (struct fsw_hfs_btree *btree, fsw_u32 nodenum, btnode_da
 		rv = fsw_hfs_read_file(btree->btfile, bstart, btree->btnode_size, (fsw_u8 *) buffer);
 
 		if ((fsw_u32) rv == btree->btnode_size) {
-			roffset = fsw_hfs_btnode_keyoffset(btree, buffer, 0);
+			fsw_u32 roffset = fsw_hfs_btnode_keyoffset(btree, buffer, 0);
 
 			if (roffset == sizeof (BTNodeDescriptor)) {
-				*outbuf = buffer;
-				status = FSW_SUCCESS;
+				fsw_u16 count;
+
+				count = be16_to_cpu (btnode->ndesc.numRecords);
+
+				if (count > 0) {
+					*outbuf = buffer;
+					status = FSW_SUCCESS;
+				}
 			}
 		}
 	}
@@ -766,11 +771,6 @@ fsw_hfs_btree_search (struct fsw_hfs_btree *btree, BTreeKey *key, int (*compare_
 			break;
 
 		count = be16_to_cpu (btnode->ndesc.numRecords);
-
-		if (count == 0) {
-			status = FSW_NOT_FOUND;
-			break;
-		}
 
 		for (tuplenum = 0; tuplenum < count; tuplenum++) {
 			currkey = fsw_hfs_btnode_key (btree, btnode, tuplenum);
@@ -922,8 +922,8 @@ fsw_hfs_btnode_iterate_records (struct fsw_hfs_btree *btree, btnode_datum_t *fir
 
 	for (;;) {
 		fsw_u32 i;
-		fsw_u32 count = be16_to_cpu (btnode->ndesc.numRecords);
 		fsw_u32 next_btnode;
+		fsw_u32 count = be16_to_cpu (btnode->ndesc.numRecords);
 
 		/* Iterate over all records in this node */
 
