@@ -38,6 +38,7 @@
   fsw_strfunc.h
   hfs_format.h
   hfs_unistr.h
+  fsw_efi_AppleBless.h
 
 [Packages]
   MdePkg/MdePkg.dec
